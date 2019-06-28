@@ -1,0 +1,15 @@
+.App {
+    text-align: center;
+}
+
+.App div {
+    margin: 2vw;
+}
+
+.story-area {
+    height: 80vh;
+    text-align: left;
+    border: 1px solid #ccc;
+    overflow: auto;
+    padding: 3vw;
+}
