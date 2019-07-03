@@ -11,7 +11,7 @@ const kInitialDimensions = {
 	height: 500
 };
 
-type notification = {message: string, ID: number, codapState: object, codapStateDiff: [number,object][] };
+type notification = {message: string, ID: number, codapState: object | null, codapStateDiff: [number,object][] };
 
 class StoryArea extends Component<{}, { numNotifications: number, stateID: number }> {
 	private notifications: notification[] = [];
@@ -27,33 +27,22 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 	}
 
 	private clear(): void {
-		this.notifications = [];
-		this.setState({numNotifications: 0});
+		this.notifications = [ {
+			message: 'start', ID: 0, codapState: this.currentState, codapStateDiff: []
+		}];
+		this.setState({numNotifications: this.notifications.length});
 	}
 
-	private getCodapState( iStateID: number): void {
-		codapInterface.sendRequest( {
-			action: 'get',
-			resource: 'document',
-			values: {
-				stateID: iStateID
-			}
-		}).then((result) => {
-			console.log('request for state sent and result returned');
-		});
-	}
-
-	private storeState( iStateID: number, iState: object): void {
-		let tFoundNotification = this.notifications.find((iNotification)=>{
-			return iNotification.ID === iStateID;
-		});
-		if( tFoundNotification) {
+	private storeState( iState: object): void {
+		let tNumNotifications = this.notifications.length,
+			tLastNotification = (tNumNotifications >= 0) ? this.notifications[ tNumNotifications - 1] : null;
+		if( tLastNotification) {
 			if( this.currentState === null) {
-				tFoundNotification.codapState = iState;
+				tLastNotification.codapState = iState;
 			}
 			else {
-				tFoundNotification.codapStateDiff = jiff.diff( this.currentState, iState);
-				let test = JSON.stringify(jiff.patch( tFoundNotification.codapStateDiff, this.currentState)) ===
+				tLastNotification.codapStateDiff = jiff.diff( this.currentState, iState);
+				let test = JSON.stringify(jiff.patch( tLastNotification.codapStateDiff, this.currentState)) ===
 					JSON.stringify(iState);
 				console.log(test);
 			}
@@ -94,8 +83,8 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 				case 'legendAttributeChange':
 					message = 'plot attribute "' + iCommand.values.attributeName + '" on graph legend';
 					break;
-				case 'getDocumentState':
-					this.storeState( iCommand.values.id, iCommand.values.state);
+				case 'newDocumentState':
+					this.storeState( iCommand.values.state);
 					break;
 				default:
 					if (iCommand.values.globalValue) {
@@ -105,7 +94,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 						message = iCommand.values.operation;
 			}
 			if (message !== '') {
-				let newID:number = this.state.stateID + 1;
+				let newID:number = this.state.stateID;
 				this.notifications.push({
 					message: message,
 					ID: newID,
@@ -113,23 +102,58 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 					codapStateDiff: []
 				});
 				let newNumNotifications = this.notifications.length;
-				this.setState({numNotifications: newNumNotifications, stateID: newID });
-				this.getCodapState( newID);
+				this.setState({numNotifications: newNumNotifications, stateID: newID + 1 });
 			}
 		}
 	}
 
+	private restoreCodapState( iCodapState:object|null) {
+		if( iCodapState) {
+			codapInterface.sendRequest( {
+				action: 'update',
+				resource: 'document',
+				values: iCodapState
+			});
+		}
+	}
+
+	private moveCodapState( iID:number) {
+		let tNotification = this.notifications.find( function( iNotification) {
+			return iNotification.ID === iID;
+		})
+		if( tNotification) {
+			let tCodapState = this.notifications[0].codapState,
+					tIndex = 0,
+					tDone = false;
+			while( !tDone && tIndex < this.notifications.length) {
+				tCodapState = jiff.patch( this.notifications[tIndex].codapStateDiff, tCodapState);
+				tDone = this.notifications[tIndex].ID === iID;
+				tIndex++;
+			}
+			this.restoreCodapState( tCodapState);
+		}
+	}
+
 	public render() {
+		let this_ = this;
 		return (
 			<div>
 				<div className="story-area">
-					<ol>
-						{this.notifications.map((iNotification, iIndex) => {
+					<div>
+						{this.notifications.map((iNotification) => {
+							let tID = iNotification.ID;
 							return (
-								<li key={iIndex}>{iNotification.message}</li>
+								<div key={tID}>
+									<button
+										onClick={function() {
+											this_.moveCodapState( tID);
+										}}
+									>▶️</button>
+									{'\t' + iNotification.message}
+									</div>
 							)
 						})}
-					</ol>
+					</div>
 				</div>
 				<button onClick={this.clear}>Clear</button>
 			</div>

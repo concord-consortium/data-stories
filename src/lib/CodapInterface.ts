@@ -75,6 +75,7 @@ interface IConfig {
   dimensions?: any;
   preventBringToFront?: any;
   preventDataContextReorg?: any;
+	subscribeToDocuments?: any;
 }
 
 var config: IConfig | null = null;
@@ -221,7 +222,8 @@ const codapInterface = {
         version: iConfig.version,
         dimensions: iConfig.dimensions,
         preventBringToFront: iConfig.preventBringToFront,
-        preventDataContextReorg: iConfig.preventDataContextReorg
+        preventDataContextReorg: iConfig.preventDataContextReorg,
+				subscribeToDocuments: iConfig.subscribeToDocuments
       };
       var updateFrameReq = {
         action: 'update',

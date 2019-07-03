@@ -4,7 +4,8 @@ export function initializePlugin(pluginName: string, version: string, dimensions
   const interfaceConfig = {
     name: pluginName,
     version: version,
-    dimensions: dimensions
+    dimensions: dimensions,
+    subscribeToDocuments: true
   };
   return codapInterface.init(interfaceConfig);
 }
