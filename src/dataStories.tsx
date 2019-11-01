@@ -12,10 +12,24 @@ const kInitialDimensions = {
 };
 
 type notification = {message: string, ID: number, codapState: object | null, codapStateDiff: [number,object][] };
+interface IStringKeyedObject {
+	[key: string]: string;
+}
 
 class StoryArea extends Component<{}, { numNotifications: number, stateID: number }> {
 	private notifications: notification[] = [];
 	private currentState: object|null = null;
+	private restoreInProgress = false;
+	private componentMap:IStringKeyedObject = {
+		'DG.GameView': 'plugin',
+		'DG.GraphView': 'graph',
+		'DG.MapView': 'map',
+		'DG.SliderView': 'slider',
+		'DG.TextView': 'text',
+		'DG.Calculator': 'calculator',
+		'DG.TableView': 'case table',
+		'DG.CaseCard': 'case card'
+	};
 
 	constructor(props: any) {
 		super(props);
@@ -34,6 +48,8 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 	}
 
 	private storeState( iState: object): void {
+		if( this.restoreInProgress)
+			return;
 		let tNumNotifications = this.notifications.length,
 			tLastNotification = (tNumNotifications >= 0) ? this.notifications[ tNumNotifications - 1] : null;
 		if( tLastNotification) {
@@ -51,22 +67,29 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 	}
 
 	private handleNotification(iCommand: any): void {
+		if( this.restoreInProgress)
+			return;
 		if (iCommand.resource !== 'undoChangeNotice') {
 			let message = '',
-				numCases = 0;
+				numCases = 0,
+				title = ' ' + (iCommand.values.title || '');
+			iCommand.values.type = this.componentMap[iCommand.values.type] || iCommand.values.type;
 			switch (iCommand.values.operation) {
 				case 'createCases':
 					numCases = iCommand.values.result.caseIDs.length;
 					message = 'create ' + numCases + (numCases > 1 ? ' cases' : ' case');
 					break;
 				case 'create':
-					message = 'create ' + iCommand.values.type;
+					message = 'create ' + iCommand.values.type + title;
+					break;
+				case 'delete':
+					message = 'delete ' + iCommand.values.type + title;
 					break;
 				case 'beginMoveOrResize':
 					break;
 				case 'move':
 				case 'resize':
-					message = iCommand.values.operation + ' ' + iCommand.values.type;
+					message = iCommand.values.operation + ' ' + iCommand.values.type + title;
 					break;
 				case 'selectCases':
 					if (iCommand.values.result.cases) {
@@ -109,10 +132,13 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 
 	private restoreCodapState( iCodapState:object|null) {
 		if( iCodapState) {
+			this.restoreInProgress = true;
 			codapInterface.sendRequest( {
 				action: 'update',
 				resource: 'document',
 				values: iCodapState
+			}).then( ()=> {
+				this.restoreInProgress = false;
 			});
 		}
 	}
