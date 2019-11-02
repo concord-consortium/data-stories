@@ -11,7 +11,21 @@ const kInitialDimensions = {
 	height: 500
 };
 
-type notification = {message: string, ID: number, codapState: object | null, codapStateDiff: [number,object][] };
+/**
+ * A type for an object; used in StoryArea.notifications, which is an Array of these things.
+ *
+ * NOTE: each notification will have either a codapState (if it's the first one) or a codapStateDiff (if it's not).
+ * The codapStateDiff is the difference (computed by jiff) between that state and the previous one.
+ * Thuis. to find the state you start at the beginning and implement the diffs until you get to that spot
+ * in the array. This takes place in moveCodapState (below)
+ */
+type notification = {
+	message: string,
+	ID: number,
+	codapState: object | null,
+	codapStateDiff: [number,object][]
+};
+
 interface IStringKeyedObject {
 	[key: string]: string;
 }
@@ -40,6 +54,9 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 		codapInterface.on('notify', '*', '', this.handleNotification);
 	}
 
+	/**
+	 * Reset the notifications array and issue a React setState() to force a redraw.
+	 */
 	private clear(): void {
 		this.notifications = [ {
 			message: 'start', ID: 0, codapState: this.currentState, codapStateDiff: []
@@ -47,16 +64,33 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 		this.setState({numNotifications: this.notifications.length});
 	}
 
+	/**
+	 * Adjusts the array of notifications.
+	 * Note that this.currentState is the member object referring to the last SAVED state.
+	 * the parameter iState is the actual current state, more recent than "this.currentState."
+	 *
+	 * So this method finds the difference between the old current state,
+	 * and installs that difference in a fresh notification in its codapStateDiff.
+	 *
+	 * This is called ONLY by newDocumentState.
+	 *
+	 * @param iState	the actual current state of CODAP
+	 */
 	private storeState( iState: object): void {
 		if( this.restoreInProgress)
 			return;
+
+		//	find the last (i.e., previous) notification in the array
 		let tNumNotifications = this.notifications.length,
 			tLastNotification = (tNumNotifications >= 0) ? this.notifications[ tNumNotifications - 1] : null;
 		if( tLastNotification) {
 			if( this.currentState === null) {
+				//	this is the first notification, so the codapState is simply the input state.
 				tLastNotification.codapState = iState;
 			}
 			else {
+				//	find the difference between the "currentState" and store it in the .codapStateDiff field.
+				//	todo: but shouldn't it be in some NEW notification rather than the last one?
 				tLastNotification.codapStateDiff = jiff.diff( this.currentState, iState);
 				let test = JSON.stringify(jiff.patch( tLastNotification.codapStateDiff, this.currentState)) ===
 					JSON.stringify(iState);
@@ -66,6 +100,13 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 		}
 	}
 
+	/**
+	 * The Kahuna of this component;
+	 * responsible for handling the various notifications we receive
+	 * when the user makes an undoable action.
+	 *
+	 * @param iCommand	the Command resulting from the user action
+	 */
 	private handleNotification(iCommand: any): void {
 		if( this.restoreInProgress)
 			return;
@@ -130,6 +171,12 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 		}
 	}
 
+	/**
+	 * Asks CODAP to restore itself to the given state.
+	 * Note: sets restoreInProgress while it's running and resolving its promises
+	 *
+	 * @param iCodapState	the state to restore to; this is the potentially large JSON object
+	 */
 	private restoreCodapState( iCodapState:object|null) {
 		if( iCodapState) {
 			this.restoreInProgress = true;
@@ -143,10 +190,17 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 		}
 	}
 
+	/**
+	 * Called when the user presses the "go" button to select and implement a particular state.
+	 * We get the notification number to go to, then reconstruct the state
+	 * by looping though the notification array until we get to the given notification number.
+	 *
+	 * @param iID	the notification ID (which was set in React as the argument in the button's onChange() )
+	 */
 	private moveCodapState( iID:number) {
 		let tNotification = this.notifications.find( function( iNotification) {
 			return iNotification.ID === iID;
-		})
+		});
 		if( tNotification) {
 			let tCodapState = this.notifications[0].codapState,
 					tIndex = 0,
@@ -187,6 +241,10 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 	}
 }
 
+/**
+ * Top-level "App" component.
+ * Represents the whole iFrame; contains the <StoryArea>
+ */
 class DataStories
 	extends Component {
 
@@ -194,6 +252,10 @@ class DataStories
 		super(props);
 	}
 
+	/**
+	 * LifeCycle method.
+	 * Calls initializePlugin from codap-helper.
+	 */
 	public componentWillMount() {
 		initializePlugin(kPluginName, kVersion, kInitialDimensions).then(function () {
 		});
