@@ -3,13 +3,42 @@
 }
 
 .App div {
-    margin: 2vw;
+    margin: 0;
+    padding : 0;
+    border-radius: 8px;
+    /*background-color: black;*/
 }
 
 .story-area {
-    height: 80vh;
+    display: flex;
+    height: 60vh;
+    width : 90vw;
     text-align: left;
-    border: 1px solid #ccc;
+    border: none;
     overflow: auto;
-    padding: 3vw;
+}
+
+.story-child {
+    /*flex-grow: 1;*/
+    /*word-wrap: break-word;*/
+    height: 20vh;
+    width : 5vw;
+    text-align: left;
+    border: 1px solid #ff0;
+    overflow: auto;
+    cursor: pointer;
+    margin : 4px;
+    padding : 4px;
+}
+
+.marker {
+    background-color: lightsteelblue;
+    margin : 4px;
+    padding : 4px;
+}
+
+.clear-button {
+    background-color: gold;
+    margin : 4px;
+    padding : 4px;
 }
