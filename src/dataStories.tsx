@@ -7,8 +7,8 @@ import './dataStories.css';
 const kPluginName = "Data Stories";
 const kVersion = "0.1";
 const kInitialDimensions = {
-	width: 300,
-	height: 500
+    width: 700,
+    height: 100
 };
 
 /**
@@ -20,41 +20,40 @@ const kInitialDimensions = {
  * in the array. This takes place in moveCodapState (below)
  */
 type notification = {
-	message: string,
-	ID: number,
-	codapStateDiff: [number,object][]
+    message: string,
+    ID: number,
+
+    codapStateDiff: [number, object][]
 };
 
 interface IStringKeyedObject {
-	[key: string]: string;
+    [key: string]: string;
 }
 
 class StoryArea extends Component<{}, { numNotifications: number, stateID: number }> {
-	private initialCodapState: object|null = null;
-	private notifications: notification[] = [];
-	private waitingForCodapState = false;	// When true, we expect CODAP to notify us of a new state
-	private currentCodapState: object|null = null;
-	private restoreInProgress = false;
-	private componentMap:IStringKeyedObject = {
-		'DG.GameView': 'plugin',
-		'DG.GraphView': 'graph',
-		'DG.MapView': 'map',
-		'DG.SliderView': 'slider',
-		'DG.TextView': 'text',
-		'DG.Calculator': 'calculator',
-		'DG.TableView': 'case table',
-		'DG.CaseCard': 'case card'
-	};
+    private initialCodapState: object|null = null;private notifications: notification[] = [];
+    private waitingForCodapState = false;	// When true, we expect CODAP to notify us of a new state
+	private currentCodapState: object | null = null;
+    private restoreInProgress = false;
+    private componentMap: IStringKeyedObject = {
+        'DG.GameView': 'plugin',
+        'DG.GraphView': 'graph',
+        'DG.MapView': 'map',
+        'DG.SliderView': 'slider',
+        'DG.TextView': 'text',
+        'DG.Calculator': 'calculator',
+        'DG.TableView': 'case table',
+        'DG.CaseCard': 'case card'
+    };
 
-	constructor(props: any) {
-		super(props);
-		this.state = {numNotifications: 0, stateID: 0 };
+    constructor(props: any) {
+        super(props);
+        this.state = {numNotifications: 0, stateID: 0};
 
-		this.handleNotification = this.handleNotification.bind(this);
-		this.clear = this.clear.bind(this);
-		codapInterface.on('notify', '*', '', this.handleNotification);
-
-		// Get the initial state
+        this.handleNotification = this.handleNotification.bind(this);
+        this.clear = this.clear.bind(this);
+        codapInterface.on('notify', '*', '', this.handleNotification);
+    // Get the initial state
 		codapInterface.sendRequest( {
 			action: 'get',
 			resource: 'document'
@@ -62,17 +61,18 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 
 	}
 
-	/**
-	 * Reset the notifications array and issue a React setState() to force a redraw.
-	 * Todo: Will we need this?
+    /**
+     * Reset the notifications array and issue a React setState() to force a redraw.
+     * Todo: Will we need this?
 	 */
-	private clear(): void {
+    private clear(): void {
 		this.initialCodapState = this.currentCodapState;
-		this.notifications = [ {
-			message: 'start', ID: 0, codapStateDiff: []
-		}];
-		this.setState({numNotifications: this.notifications.length});
-	}
+        console.log("Clear clicked");
+        this.notifications = [{
+            message: 'start', ID: 0, codapStateDiff: []
+        }];
+        this.setState({numNotifications: this.notifications.length});
+    }
 
 	/**
 	 * Adjusts the array of notifications.
@@ -109,95 +109,94 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 		this.currentCodapState = iCodapState;
 	}
 
-	/**
-	 * The Kahuna of this component;
-	 * responsible for handling the various notifications we receive
-	 * when the user makes an undoable action.
-	 *
-	 * @param iCommand	the Command resulting from the user action
-	 */
-	private handleNotification(iCommand: any): void {
-		if( this.restoreInProgress)
-			return;
-		if (iCommand.resource !== 'undoChangeNotice') {
-			let message = '',
-				numCases = 0,
-				title = ' ' + (iCommand.values.title || '');
-			iCommand.values.type = this.componentMap[iCommand.values.type] || iCommand.values.type;
-			switch (iCommand.values.operation) {
-				case 'createCases':
-					numCases = iCommand.values.result.caseIDs.length;
-					message = 'create ' + numCases + (numCases > 1 ? ' cases' : ' case');
-					break;
-				case 'create':
-					message = 'create ' + iCommand.values.type + title;
-					break;
-				case 'delete':
-					message = 'delete ' + iCommand.values.type + title;
-					break;
-				case 'beginMoveOrResize':
-					break;
-				case 'move':
-				case 'resize':
-					message = iCommand.values.operation + ' ' + iCommand.values.type + title;
-					break;
-				case 'selectCases':
-					if (iCommand.values.result.cases) {
-						numCases = iCommand.values.result.cases.length;
-						message = 'select ' + numCases + ' case' + (numCases > 1 ? 's' : '');
-					}
-					break;
-				case 'hideSelected':
-					message = 'hide selected cases';
-					break;
-				case 'attributeChange':
-					message = 'plot attribute "' + iCommand.values.attributeName + '" on graph';
-					break;
-				case 'legendAttributeChange':
-					message = 'plot attribute "' + iCommand.values.attributeName + '" on graph legend';
-					break;
-				case 'newDocumentState':
-					this.storeCodapState( iCommand.values.state);
-					break;
-				default:
-					if (iCommand.values.globalValue) {
+    /**
+     * The Kahuna of this component;
+     * responsible for handling the various notifications we receive
+     * when the user makes an undoable action.
+     *
+     * @param iCommand    the Command resulting from the user action
+     */
+    private handleNotification(iCommand: any): void {
+        if (this.restoreInProgress)
+            return;
+        if (iCommand.resource !== 'undoChangeNotice') {
+            let message = '',
+                numCases = 0,
+                title = ' ' + (iCommand.values.title || '');
+            iCommand.values.type = this.componentMap[iCommand.values.type] || iCommand.values.type;
+            switch (iCommand.values.operation) {
+                case 'createCases':
+                    numCases = iCommand.values.result.caseIDs.length;
+                    message = 'create ' + numCases + (numCases > 1 ? ' cases' : ' case');
+                    break;
+                case 'create':
+                    message = 'create ' + iCommand.values.type + title;
+                    break;
+                case 'delete':
+                    message = 'delete ' + iCommand.values.type + title;
+                    break;
+                case 'beginMoveOrResize':
+                    break;
+                case 'move':
+                case 'resize':
+                    message = iCommand.values.operation + ' ' + iCommand.values.type + title;
+                    break;
+                case 'selectCases':
+                    if (iCommand.values.result.cases) {
+                        numCases = iCommand.values.result.cases.length;
+                        message = 'select ' + numCases + ' case' + (numCases > 1 ? 's' : '');
+                    }
+                    break;
+                case 'hideSelected':
+                    message = 'hide selected cases';
+                    break;
+                case 'attributeChange':
+                    message = 'plot attribute "' + iCommand.values.attributeName + '" on graph';
+                    break;
+                case 'legendAttributeChange':
+                    message = 'plot attribute "' + iCommand.values.attributeName + '" on graph legend';
+                    break;
+                case 'newDocumentState':
+                    this.storeCodapState(iCommand.values.state);
+                    break;
+                default:
+                    if (iCommand.values.globalValue) {
 
-					}
-					else
-						message = iCommand.values.operation;
-			}
-			if (message !== '') {
-				let newID:number = this.state.stateID;
-				this.notifications.push({
-					message: message,
-					ID: newID,
-					codapStateDiff: []
-				});
-				this.waitingForCodapState = true;
-				this.setState({numNotifications: this.notifications.length, stateID: newID + 1 });
-			}
-		}
-	}
+                    } else
+                        message = iCommand.values.operation;
+            }
+            if (message !== '') {
+                let newID: number = this.state.stateID;
+                this.notifications.push({
+                    message: message,
+                    ID: newID,
 
-	/**
-	 * Asks CODAP to restore itself to the given state.
-	 * Note: sets restoreInProgress while it's running and resolving its promises
-	 *
-	 * @param iCodapState	the state to restore to; this is the potentially large JSON object
-	 */
-	private restoreCodapState( iCodapState:object|null) {
-		if( iCodapState) {
-			let this_ = this;
-			this.restoreInProgress = true;
-			codapInterface.sendRequest( {
-				action: 'update',
-				resource: 'document',
-				values: iCodapState
-			}).then( ()=> {
-				this_.restoreInProgress = false;
-			});
-		}
-	}
+                    codapStateDiff: []
+                });
+                this.waitingForCodapState = true;
+                this.setState({numNotifications: this.notifications.length, stateID: newID + 1});
+            }
+        }
+    }
+
+    /**
+     * Asks CODAP to restore itself to the given state.
+     * Note: sets restoreInProgress while it's running and resolving its promises
+     *
+     * @param iCodapState    the state to restore to; this is the potentially large JSON object
+     */
+    private restoreCodapState(iCodapState: object | null) {
+        if (iCodapState) {
+            let this_ = this;this.restoreInProgress = true;
+            codapInterface.sendRequest({
+                action: 'update',
+                resource: 'document',
+                values: iCodapState
+            }).then(() => {
+                this_.restoreInProgress = false;
+            });
+        }
+    }
 
 	/**
 	 * Called when the user presses the "go" button to select and implement a particular state.
@@ -243,31 +242,44 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 		}
 	}
 
-	public render() {
-		let this_ = this;
-		return (
-			<div>
-				<div className="story-area">
-					<div>
-						{this.notifications.map((iNotification) => {
-							let tID = iNotification.ID;
-							return (
-								<div key={tID}>
-									<button
-										onClick={function() {
-											this_.moveCodapState( tID);
-										}}
-									>▶️</button>
-									{'\t' + iNotification.message}
-									</div>
-							)
-						})}
-					</div>
-				</div>
-				<button onClick={this.clear}>Clear</button>
-			</div>
-		);
-	}
+    public render() {
+        let this_ = this;
+
+        {/*loop over all notifications; make a Marker for each*/}
+        const theMarkers = this_.notifications.map(
+            (aNotification) => {
+                const tID = aNotification.ID;
+                return (
+                    <Marker
+                        key={tID}
+                        ID={tID}
+                        onClick={() => this_.moveCodapState(tID)}
+                        theText={aNotification.message}
+                    />
+                )
+            }
+        );
+
+        return (
+            <div>
+                <div className="story-area">
+                    {theMarkers}
+                    {/*finally, the clear button*/}
+                    <div className="story-child, clear-button" onClick={this.clear}>Clear</div>
+                </div>
+
+            </div>
+        );
+    }
+}
+
+function Marker(props: any) {
+    console.log("Rendering marker " + props.ID + " (" + props.theText + ")");
+    return (
+        <div className="story-child marker" onClick={props.onClick}>
+            {props.theText}
+        </div>
+    );
 }
 
 /**
@@ -275,30 +287,29 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
  * Represents the whole iFrame; contains the <StoryArea>
  */
 class DataStories
-	extends Component {
+    extends Component {
 
-	constructor(props: any) {
-		super(props);
-	}
+    constructor(props: any) {
+        super(props);
+    }
 
-	/**
-	 * LifeCycle method.
-	 * Calls initializePlugin from codap-helper.
-	 */
-	public componentWillMount() {
-		initializePlugin(kPluginName, kVersion, kInitialDimensions).then(function () {
-		});
-	}
+    /**
+     * LifeCycle method.
+     * Calls initializePlugin from codap-helper.
+     */
+    public componentWillMount() {
+        initializePlugin(kPluginName, kVersion, kInitialDimensions).then(function () {
+        });
+    }
 
-	public render() {
+    public render() {
 
-		return (
-			<div className="App">
-				<span className="title"> Welcome to Data Stories </span>
-				<StoryArea/>
-			</div>
-		);
-	}
+        return (
+            <div className="App">
+                <StoryArea/>
+            </div>
+        );
+    }
 
 }
 
