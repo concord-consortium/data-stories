@@ -264,12 +264,17 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         return (
             <div>
                 <div className="story-area">
+{/*
+                    start with the Clear button
+*/}
                     <div className="story-child clear-button"
                          onClick={this.clear}
                          title={"press to clear all of your markers"}
                     >Clear</div>
+{/*
+                    now the markers
+*/}
                     {theMarkers}
-                    {/*finally, the clear button*/}
                 </div>
 
             </div>
