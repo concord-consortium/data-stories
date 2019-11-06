@@ -4,7 +4,8 @@ import codapInterface from "./lib/CodapInterface";
 import {initializePlugin} from './lib/codap-helper';
 import './dataStories.css';
 
-const kPluginName = "Data Stories";
+const kPluginTitle = "Data Stories";
+const kPluginName = "DataStories";
 const kVersion = "0.1";
 const kInitialDimensions = {
     width: 700,
@@ -237,9 +238,12 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         return (
             <div>
                 <div className="story-area">
+                    <div className="story-child clear-button"
+                         onClick={this.clear}
+                         title={"press to clear all of your markers"}
+                    >Clear</div>
                     {theMarkers}
                     {/*finally, the clear button*/}
-                    <div className="story-child, clear-button" onClick={this.clear}>Clear</div>
                 </div>
 
             </div>
@@ -250,7 +254,10 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 function Marker(props: any) {
     console.log("Rendering marker " + props.ID + " (" + props.theText + ")");
     return (
-        <div className="story-child marker" onClick={props.onClick}>
+        <div className="story-child marker"
+             onClick={props.onClick}
+             title={props.theText}
+        >
             {props.theText}
         </div>
     );
@@ -271,9 +278,45 @@ class DataStories
      * LifeCycle method.
      * Calls initializePlugin from codap-helper.
      */
-    public componentWillMount() {
-        initializePlugin(kPluginName, kVersion, kInitialDimensions).then(function () {
-        });
+    public async componentWillMount() {
+        await initializePlugin(kPluginName, kVersion, kInitialDimensions);
+
+        const getComponentListMessage = {
+            'action' : 'get',
+            'resource' : 'componentList'
+        };
+
+        console.log('trying to get information on the plugin as a component with ' + JSON.stringify(getComponentListMessage));
+        try {
+            codapInterface.sendRequest(getComponentListMessage).then(
+                (tResult : any) => {
+                    const listResult = tResult.values;
+                    console.log('the list result: ' + JSON.stringify(listResult));
+                    let thePluginID = null;
+                    listResult.forEach((c : any) => {
+                        if (c.title === kPluginName) {
+                            thePluginID = c.id;
+                            console.log(kPluginName + ' has ID ' + thePluginID);
+                        }
+                    });
+                    const positionMessage = {
+                        'action': 'update',
+                        'resource': 'component[' + thePluginID + ']',
+                        'values': {'position': 'bottom'}
+                    };
+                    console.log('trying to position the plugin with ' + JSON.stringify(positionMessage));
+                    codapInterface.sendRequest(positionMessage).then(
+                        (res) => {
+                            console.log('Positioning result: ' + JSON.stringify(res));
+                        }
+                    );
+                }
+            );
+        } catch(err) {
+            console.log('error trying to get id: ' + err);
+        }
+
+
     }
 
     public render() {
