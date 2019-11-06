@@ -1,17 +1,20 @@
 .App {
     text-align: center;
+    background-color: #ddd;
 }
 
+/*
 .App div {
     margin: 0;
     padding : 0;
     border-radius: 8px;
-    /*background-color: black;*/
+    !*background-color: black;*!
 }
+*/
 
 .story-area {
     display: flex;
-    height: 60vh;
+    height: 48px;
     width : 90vw;
     text-align: left;
     border: none;
@@ -21,24 +24,22 @@
 .story-child {
     /*flex-grow: 1;*/
     /*word-wrap: break-word;*/
-    height: 20vh;
-    width : 5vw;
+    border-radius: 8px;
+    height: 32px;
+    width : 32px;
     text-align: left;
-    border: 1px solid #ff0;
+    font-size: 9px;
+    /*border: 1px solid #000;*/
     overflow: auto;
     cursor: pointer;
-    margin : 4px;
+    margin : 2px;
     padding : 4px;
 }
 
 .marker {
     background-color: lightsteelblue;
-    margin : 4px;
-    padding : 4px;
 }
 
 .clear-button {
     background-color: gold;
-    margin : 4px;
-    padding : 4px;
 }
