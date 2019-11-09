@@ -3,15 +3,6 @@
     background-color: #ddd;
 }
 
-/*
-.App div {
-    margin: 0;
-    padding : 0;
-    border-radius: 8px;
-    !*background-color: black;*!
-}
-*/
-
 .story-area {
     display: flex;
     height: 48px;
@@ -30,10 +21,14 @@
     text-align: left;
     font-size: 9px;
     /*border: 1px solid #000;*/
-    overflow: auto;
+    overflow: hidden;   /*  was auto    */
     cursor: pointer;
     margin : 2px;
     padding : 4px;
+}
+
+.event {
+    background-color: lightgray;
 }
 
 .marker {

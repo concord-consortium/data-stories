@@ -6,7 +6,7 @@ import './dataStories.css';
 
 const kPluginTitle = "Data Stories";
 const kPluginName = "DataStories";
-const kVersion = "0.1";
+const kVersion = "0.1t";
 const kInitialDimensions = {
     width: 700,
     height: 100
@@ -23,7 +23,7 @@ const kInitialDimensions = {
 type notification = {
     message: string,
     ID: number,
-
+    isMarker : Boolean,
     codapStateDiff: [number, object][]
 };
 
@@ -70,7 +70,10 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 		this.initialCodapState = this.currentCodapState;
         console.log("Clear clicked");
         this.notifications = [{
-            message: 'start', ID: 0, codapStateDiff: []
+            message: 'start',
+            ID: 0,
+            isMarker: true,
+            codapStateDiff: []
         }];
         this.setState({numNotifications: this.notifications.length});
     }
@@ -171,7 +174,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                 this.notifications.push({
                     message: message,
                     ID: newID,
-
+                    isMarker: false,
                     codapStateDiff: []
                 });
                 this.waitingForCodapState = true;
@@ -243,19 +246,35 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 		}
 	}
 
+    public onStoryEventClick(iID : number) {
+        let this_ = this;
+        let tNotification = this.notifications.find( function(n) {return n.ID === iID});
+        if (tNotification) {
+            if (tNotification.isMarker) {
+                console.log('Clicked on marker [' + tNotification.message + ']');
+                this_.moveCodapState(iID);
+            } else {
+                tNotification.isMarker = true;
+                console.log('Converted event [' + tNotification.message + "] to marker");
+
+            }
+        }
+    }
+
     public render() {
         let this_ = this;
 
         {/*loop over all notifications; make a Marker for each*/}
-        const theMarkers = this_.notifications.map(
+        const theEvents = this_.notifications.map(
             (aNotification) => {
                 const tID = aNotification.ID;
                 return (
-                    <Marker
+                    <Event
                         key={tID}
                         ID={tID}
-                        onClick={() => this_.moveCodapState(tID)}
+                        onClick={() => this_.onStoryEventClick(tID)}
                         theText={aNotification.message}
+                        isMarker={aNotification.isMarker}
                     />
                 )
             }
@@ -274,7 +293,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 {/*
                     now the markers
 */}
-                    {theMarkers}
+                    {theEvents}
                 </div>
 
             </div>
@@ -282,10 +301,11 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
     }
 }
 
-function Marker(props: any) {
-    console.log("Rendering marker " + props.ID + " (" + props.theText + ")");
+function Event(props: any) {
+    console.log("Rendering event " + props.ID + " (" + props.theText + ")");
+    const theClasses = props.isMarker ? "story-child marker" : "story-child event";
     return (
-        <div className="story-child marker"
+        <div className={theClasses}
              onClick={props.onClick}
              title={props.theText}
         >
