@@ -22,7 +22,6 @@ const kInitialDimensions = {
 type notification = {
 	message: string,
 	ID: number,
-	codapState: object | null,
 	codapStateDiff: [number,object][]
 };
 
@@ -31,7 +30,9 @@ interface IStringKeyedObject {
 }
 
 class StoryArea extends Component<{}, { numNotifications: number, stateID: number }> {
+	private initialState: object|null = null;
 	private notifications: notification[] = [];
+	private waitingForState = false;
 	private currentState: object|null = null;
 	private restoreInProgress = false;
 	private componentMap:IStringKeyedObject = {
@@ -52,14 +53,22 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 		this.handleNotification = this.handleNotification.bind(this);
 		this.clear = this.clear.bind(this);
 		codapInterface.on('notify', '*', '', this.handleNotification);
+
+		// Get the initial state
+		codapInterface.sendRequest( {
+			action: 'get',
+			resource: 'document'
+		}).then( ()=>{});
+
 	}
 
 	/**
 	 * Reset the notifications array and issue a React setState() to force a redraw.
 	 */
 	private clear(): void {
+		this.initialState = this.currentState;
 		this.notifications = [ {
-			message: 'start', ID: 0, codapState: this.currentState, codapStateDiff: []
+			message: 'start', ID: 0, codapStateDiff: []
 		}];
 		this.setState({numNotifications: this.notifications.length});
 	}
@@ -77,27 +86,26 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 	 * @param iState	the actual current state of CODAP
 	 */
 	private storeState( iState: object): void {
-		if( this.restoreInProgress)
-			return;
-
-		//	find the last (i.e., previous) notification in the array
-		let tNumNotifications = this.notifications.length,
-			tLastNotification = (tNumNotifications >= 0) ? this.notifications[ tNumNotifications - 1] : null;
-		if( tLastNotification) {
-			if( this.currentState === null) {
-				//	this is the first notification, so the codapState is simply the input state.
-				tLastNotification.codapState = iState;
-			}
-			else {
-				//	find the difference between the "currentState" and store it in the .codapStateDiff field.
-				//	todo: but shouldn't it be in some NEW notification rather than the last one?
-				tLastNotification.codapStateDiff = jiff.diff( this.currentState, iState);
-				let test = JSON.stringify(jiff.patch( tLastNotification.codapStateDiff, this.currentState)) ===
-					JSON.stringify(iState);
-				console.log(test);
-			}
-			this.currentState = iState;
+		if( !this.initialState) {
+			this.initialState = iState;
 		}
+		else if( this.restoreInProgress || !this.waitingForState)
+			return;
+		else {
+			this.waitingForState = false;
+			//	find the last (i.e., previous) notification in the array
+			let tNumNotifications = this.notifications.length,
+					tLastNotification = (tNumNotifications > 0) ? this.notifications[tNumNotifications - 1] : null;
+			if (tLastNotification) {
+				if( tLastNotification.codapStateDiff.length > 0) {
+					window.alert('Expected empty array for codapStateDiff');
+					debugger;
+				}
+				//	find the difference between the "currentState" and store it in the .codapStateDiff field.
+				tLastNotification.codapStateDiff = jiff.diff(this.currentState, iState);
+			}
+		}
+		this.currentState = iState;
 	}
 
 	/**
@@ -162,11 +170,10 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 				this.notifications.push({
 					message: message,
 					ID: newID,
-					codapState: {},
 					codapStateDiff: []
 				});
-				let newNumNotifications = this.notifications.length;
-				this.setState({numNotifications: newNumNotifications, stateID: newID + 1 });
+				this.waitingForState = true;
+				this.setState({numNotifications: this.notifications.length, stateID: newID + 1 });
 			}
 		}
 	}
@@ -179,13 +186,14 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 	 */
 	private restoreCodapState( iCodapState:object|null) {
 		if( iCodapState) {
+			let this_ = this;
 			this.restoreInProgress = true;
 			codapInterface.sendRequest( {
 				action: 'update',
 				resource: 'document',
 				values: iCodapState
 			}).then( ()=> {
-				this.restoreInProgress = false;
+				this_.restoreInProgress = false;
 			});
 		}
 	}
@@ -198,19 +206,39 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 	 * @param iID	the notification ID (which was set in React as the argument in the button's onChange() )
 	 */
 	private moveCodapState( iID:number) {
+
+		// Detect situations in which we're trying to patch out of sequence
+		function testPatch( iDiff:object, iState:object|null) {
+			try {
+				jiff.patch(iDiff, iState);
+				return true;
+			}
+			catch (e) {
+				window.alert(e);
+				debugger;
+				return false;
+			}
+		}
+
 		let tNotification = this.notifications.find( function( iNotification) {
 			return iNotification.ID === iID;
 		});
 		if( tNotification) {
-			let tCodapState = this.notifications[0].codapState,
+			let tCodapState = this.initialState,
 					tIndex = 0,
 					tDone = false;
 			while( !tDone && tIndex < this.notifications.length) {
-				tCodapState = jiff.patch( this.notifications[tIndex].codapStateDiff, tCodapState);
+				if( testPatch(this.notifications[tIndex].codapStateDiff, tCodapState))
+				{
+					tCodapState = jiff.patch(this.notifications[tIndex].codapStateDiff, tCodapState);
+				}
 				tDone = this.notifications[tIndex].ID === iID;
 				tIndex++;
 			}
 			this.restoreCodapState( tCodapState);
+		}
+		else {
+			window.alert("Notification not found");
 		}
 	}
 
