@@ -30,10 +30,10 @@ interface IStringKeyedObject {
 }
 
 class StoryArea extends Component<{}, { numNotifications: number, stateID: number }> {
-	private initialState: object|null = null;
+	private initialCodapState: object|null = null;
 	private notifications: notification[] = [];
-	private waitingForState = false;
-	private currentState: object|null = null;
+	private waitingForCodapState = false;	// When true, we expect CODAP to notify us of a new state
+	private currentCodapState: object|null = null;
 	private restoreInProgress = false;
 	private componentMap:IStringKeyedObject = {
 		'DG.GameView': 'plugin',
@@ -64,9 +64,10 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 
 	/**
 	 * Reset the notifications array and issue a React setState() to force a redraw.
+	 * Todo: Will we need this?
 	 */
 	private clear(): void {
-		this.initialState = this.currentState;
+		this.initialCodapState = this.currentCodapState;
 		this.notifications = [ {
 			message: 'start', ID: 0, codapStateDiff: []
 		}];
@@ -75,24 +76,24 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 
 	/**
 	 * Adjusts the array of notifications.
-	 * Note that this.currentState is the member object referring to the last SAVED state.
-	 * the parameter iState is the actual current state, more recent than "this.currentState."
+	 * Note that this.currentCodapState is the member object referring to the last SAVED state.
+	 * the parameter iCodapState is the actual current state, more recent than "this.currentCodapState."
 	 *
 	 * So this method finds the difference between the old current state,
 	 * and installs that difference in a fresh notification in its codapStateDiff.
 	 *
 	 * This is called ONLY by newDocumentState.
 	 *
-	 * @param iState	the actual current state of CODAP
+	 * @param iCodapState	the actual current state of CODAP
 	 */
-	private storeState( iState: object): void {
-		if( !this.initialState) {
-			this.initialState = iState;
+	private storeCodapState( iCodapState: object): void {
+		if( !this.initialCodapState) {
+			this.initialCodapState = iCodapState;
 		}
-		else if( this.restoreInProgress || !this.waitingForState)
+		else if( this.restoreInProgress || !this.waitingForCodapState)
 			return;
 		else {
-			this.waitingForState = false;
+			this.waitingForCodapState = false;
 			//	find the last (i.e., previous) notification in the array
 			let tNumNotifications = this.notifications.length,
 					tLastNotification = (tNumNotifications > 0) ? this.notifications[tNumNotifications - 1] : null;
@@ -101,11 +102,11 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 					window.alert('Expected empty array for codapStateDiff');
 					debugger;
 				}
-				//	find the difference between the "currentState" and store it in the .codapStateDiff field.
-				tLastNotification.codapStateDiff = jiff.diff(this.currentState, iState);
+				//	find the difference between the "currentCodapState" and store it in the .codapStateDiff field.
+				tLastNotification.codapStateDiff = jiff.diff(this.currentCodapState, iCodapState);
 			}
 		}
-		this.currentState = iState;
+		this.currentCodapState = iCodapState;
 	}
 
 	/**
@@ -156,7 +157,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 					message = 'plot attribute "' + iCommand.values.attributeName + '" on graph legend';
 					break;
 				case 'newDocumentState':
-					this.storeState( iCommand.values.state);
+					this.storeCodapState( iCommand.values.state);
 					break;
 				default:
 					if (iCommand.values.globalValue) {
@@ -172,7 +173,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 					ID: newID,
 					codapStateDiff: []
 				});
-				this.waitingForState = true;
+				this.waitingForCodapState = true;
 				this.setState({numNotifications: this.notifications.length, stateID: newID + 1 });
 			}
 		}
@@ -224,7 +225,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 			return iNotification.ID === iID;
 		});
 		if( tNotification) {
-			let tCodapState = this.initialState,
+			let tCodapState = this.initialCodapState,
 					tIndex = 0,
 					tDone = false;
 			while( !tDone && tIndex < this.notifications.length) {
