@@ -43,7 +43,8 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 		'DG.TextView': 'text',
 		'DG.Calculator': 'calculator',
 		'DG.TableView': 'case table',
-		'DG.CaseCard': 'case card'
+		'DG.CaseCard': 'case card',
+		'calcView': 'Calculator'
 	};
 
 	constructor(props: any) {
@@ -117,12 +118,24 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 	 * @param iCommand	the Command resulting from the user action
 	 */
 	private handleNotification(iCommand: any): void {
+
+		function formComponentMessage() {
+			let cMsg = '',
+					cTitle = ' ' + (iCommand.values.title || '');
+			if( iCommand.values.type === 'calculator') {
+				cMsg = 'Calculator'
+			}
+			else {
+				cMsg = iCommand.values.type + cTitle;
+			}
+			return cMsg;
+		}
+
 		if( this.restoreInProgress)
 			return;
 		if (iCommand.resource !== 'undoChangeNotice') {
 			let message = '',
-				numCases = 0,
-				title = ' ' + (iCommand.values.title || '');
+				numCases = 0;
 			iCommand.values.type = this.componentMap[iCommand.values.type] || iCommand.values.type;
 			switch (iCommand.values.operation) {
 				case 'createCases':
@@ -130,16 +143,16 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 					message = 'create ' + numCases + (numCases > 1 ? ' cases' : ' case');
 					break;
 				case 'create':
-					message = 'create ' + iCommand.values.type + title;
+					message = 'create ' + formComponentMessage();
 					break;
 				case 'delete':
-					message = 'delete ' + iCommand.values.type + title;
+					message = 'delete ' + formComponentMessage();
 					break;
 				case 'beginMoveOrResize':
 					break;
 				case 'move':
 				case 'resize':
-					message = iCommand.values.operation + ' ' + iCommand.values.type + title;
+					message = iCommand.values.operation + ' ' + formComponentMessage();
 					break;
 				case 'selectCases':
 					if (iCommand.values.result.cases) {
