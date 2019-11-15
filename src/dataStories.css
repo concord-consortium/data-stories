@@ -1,15 +1,57 @@
 .App {
     text-align: center;
+    background-color: #eee;
 }
 
-.App div {
-    margin: 2vw;
+.story-panel {
+    display: flex;
+    height: 52px;
+    width: 95vw;
+    text-align: left;
+    border: none;
+    overflow: auto;
 }
 
 .story-area {
-    height: 80vh;
+    display: flex;
+    height: 48px;
+    /* width : 90vw;    */
     text-align: left;
-    border: 1px solid #ccc;
+    border: none;
     overflow: auto;
-    padding: 3vw;
+}
+
+.message {
+    width: 72px;
+    font-size: 9px;
+    margin: 2px;
+    padding: 4px;
+}
+
+.story-child {
+    /*flex-grow: 1;*/
+    /*word-wrap: break-word;*/
+    border-radius: 8px;
+    height: 32px;
+    width: 32px;
+    text-align: left;
+    font-size: 9px;
+    /*border: 1px solid #000;*/
+    overflow: hidden; /*  was auto    */
+    cursor: pointer;
+    margin: 2px;
+    padding: 4px;
+    user-select: none;
+}
+
+.event {
+    background-color: #cde;
+}
+
+.marker {
+    background-color: #9ab;
+}
+
+.clear-button {
+    background-color: gold;
 }
