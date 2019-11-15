@@ -31,20 +31,20 @@ interface IStringKeyedObject {
 }
 
 class StoryArea extends Component<{}, { numNotifications: number, stateID: number }> {
-	private initialCodapState: object|null = null;
-	private notifications: notification[] = [];
-	private waitingForCodapState = false;	// When true, we expect CODAP to notify us of a new state
-	private currentCodapState: object|null = null;
-	private restoreInProgress = false;
-	private componentMap:IStringKeyedObject = {
-		'DG.GameView': 'plugin',
-		'DG.GraphView': 'graph',
-		'DG.MapView': 'map',
-		'DG.SliderView': 'slider',
-		'DG.TextView': 'text',
-		'DG.Calculator': 'calculator',
-		'DG.TableView': 'case table',
-		'DG.CaseCard': 'case card',
+    private initialCodapState: object | null = null;
+    private notifications: notification[] = [];
+    private waitingForCodapState = false;	// When true, we expect CODAP to notify us of a new state
+    private currentCodapState: object | null = null;
+    private restoreInProgress = false;
+    private componentMap: IStringKeyedObject = {
+        'DG.GameView': 'plugin',
+        'DG.GraphView': 'graph',
+        'DG.MapView': 'map',
+        'DG.SliderView': 'slider',
+        'DG.TextView': 'text',
+        'DG.Calculator': 'calculator',
+        'DG.TableView': 'case table',
+        'DG.CaseCard': 'case card',
 	'calcView': 'Calculator'};
 
     constructor(props: any) {
