@@ -169,6 +169,9 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 				case 'legendAttributeChange':
 					message = 'plot attribute "' + iCommand.values.attributeName + '" on graph legend';
 					break;
+				case 'edit':
+					message = 'edit ' + iCommand.values.title;
+					break;
 				case 'newDocumentState':
 					this.storeCodapState( iCommand.values.state);
 					break;
