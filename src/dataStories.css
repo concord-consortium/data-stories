@@ -52,6 +52,10 @@
     background-color: #9ab;
 }
 
+.current {
+    border: 2px solid;
+}
+
 .clear-button {
     background-color: gold;
 }

@@ -22,6 +22,8 @@ const kInitialDimensions = {
 type notification = {
     message: string,
     ID: number,
+    prev: number,
+    next: number,
     isMarker: Boolean,
     codapStateDiff: [number, object][]
 };
@@ -33,6 +35,8 @@ interface IStringKeyedObject {
 class StoryArea extends Component<{}, { numNotifications: number, stateID: number }> {
     private initialCodapState: object | null = null;
     private notifications: notification[] = [];
+    private startingNotificationIndex = -1;
+    private currentNotificationIndex = -1;
     private waitingForCodapState = false;	// When true, we expect CODAP to notify us of a new state
     private currentCodapState: object | null = null;
     private restoreInProgress = false;
@@ -45,11 +49,12 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         'DG.Calculator': 'calculator',
         'DG.TableView': 'case table',
         'DG.CaseCard': 'case card',
-	'calcView': 'Calculator'};
+        'calcView': 'Calculator'
+    };
 
     constructor(props: any) {
         super(props);
-        this.state = {numNotifications: 0, stateID: 0};
+        this.state = {numNotifications: 0, stateID: -1};
 
         this.handleNotification = this.handleNotification.bind(this);
         this.clear = this.clear.bind(this);
@@ -59,25 +64,35 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
             action: 'get',
             resource: 'document'
         }).then(() => {
+            this.clear()
         });
 
     }
 
     /**
-     * Reset the notifications array and issue a React setState() to force a redraw.
-     * Todo: Will we need this?
+     * Reset the notifications array and force a redraw.
      */
     private clear(): void {
+        let tCurrentNotificationIndex = this.state.stateID;
+
+        if (tCurrentNotificationIndex < 0) tCurrentNotificationIndex = 0;
+        this.startingNotificationIndex = tCurrentNotificationIndex;
+
         this.initialCodapState = this.currentCodapState;
-        console.log("Clear clicked");
+        console.log("Reset to current state");
+
+        /* Create a single (start) notification with a blank "diff" */
         this.notifications = [{
             message: 'start',
-            ID: 0,
+            ID: tCurrentNotificationIndex,
+            prev: -1,
+            next: -1,
             isMarker: true,
             codapStateDiff: []
         }];
-        this.setState({numNotifications: this.notifications.length});
-    }
+
+        this.setState({stateID: tCurrentNotificationIndex});
+    };
 
     /**
      * Adjusts the array of notifications.
@@ -113,86 +128,104 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         this.currentCodapState = iCodapState;
     }
 
-	/**
-	 * The Kahuna of this component;
-	 * responsible for handling the various notifications we receive
-	 * when the user makes an undoable action.
-	 *
-	 * @param iCommand	the Command resulting from the user action
-	 */
-	private handleNotification(iCommand: any): void {
-		function formComponentMessage() {
-			let cMsg = '',
-					cTitle = ' ' + (iCommand.values.title || '');
-			if( iCommand.values.type === 'calculator') {
-				cMsg = 'Calculator'
-			}
-			else {
-				cMsg = iCommand.values.type + cTitle;
-			}
-			return cMsg;
-		}if( this.restoreInProgress)
-			return;
-		if (iCommand.resource !== 'undoChangeNotice') {
-			let message = '',
-				numCases = 0;
+    /**
+     * The Kahuna of this component;
+     * responsible for handling the various notifications we receive
+     * when the user makes an undoable action.
+     *
+     * @param iCommand    the Command resulting from the user action
+     */
+    private handleNotification(iCommand: any): void {
+        function formComponentMessage() {
+            let cMsg = '',
+                cTitle = ' ' + (iCommand.values.title || '');
+            if (iCommand.values.type === 'calculator') {
+                cMsg = 'Calculator'
+            } else {
+                cMsg = iCommand.values.type + cTitle;
+            }
+            return cMsg;
+        }
 
-			iCommand.values.type = this.componentMap[iCommand.values.type] || iCommand.values.type;
-			switch (iCommand.values.operation) {
-				case 'createCases':
-					numCases = iCommand.values.result.caseIDs.length;
-					message = 'create ' + numCases + (numCases > 1 ? ' cases' : ' case');
-					break;
-				case 'create':
-					message = 'create ' + formComponentMessage();
-					break;
-				case 'delete':
-					message = 'delete ' + formComponentMessage();
-					break;
-				case 'beginMoveOrResize':
-					break;
-				case 'move':
-				case 'resize':
-					message = iCommand.values.operation + ' ' + formComponentMessage();
-					break;
-				case 'selectCases':
-					if (iCommand.values.result.cases) {
-						numCases = iCommand.values.result.cases.length;
-						message = 'select ' + numCases + ' case' + (numCases > 1 ? 's' : '');
-					}
-					break;
-				case 'hideSelected':
-					message = 'hide selected cases';
-					break;
-				case 'attributeChange':
-					message = 'plot attribute "' + iCommand.values.attributeName + '" on graph';
-					break;
-				case 'legendAttributeChange':
-					message = 'plot attribute "' + iCommand.values.attributeName + '" on graph legend';break;
-				case 'edit':
-					message = 'edit ' + iCommand.values.title;
-					break;
-				case 'newDocumentState':
-					this.storeCodapState( iCommand.values.state);
-					break;
-				default:
-					if (iCommand.values.globalValue) {
+        if (this.restoreInProgress)
+            return;
+        if (iCommand.resource !== 'undoChangeNotice') {
+            let message = '',
+                numCases = 0;
+
+            iCommand.values.type = this.componentMap[iCommand.values.type] || iCommand.values.type;
+            switch (iCommand.values.operation) {
+                case 'createCases':
+                    numCases = iCommand.values.result.caseIDs.length;
+                    message = 'create ' + numCases + (numCases > 1 ? ' cases' : ' case');
+                    break;
+                case 'create':
+                    message = 'create ' + formComponentMessage();
+                    break;
+                case 'delete':
+                    message = 'delete ' + formComponentMessage();
+                    break;
+                case 'beginMoveOrResize':
+                    break;
+                case 'move':
+                case 'resize':
+                    message = iCommand.values.operation + ' ' + formComponentMessage();
+                    break;
+                case 'selectCases':
+                    if (iCommand.values.result.cases) {
+                        numCases = iCommand.values.result.cases.length;
+                        message = 'select ' + numCases + ' case' + (numCases > 1 ? 's' : '');
+                    }
+                    break;
+                case 'hideSelected':
+                    message = 'hide selected cases';
+                    break;
+                case 'attributeChange':
+                    message = 'plot attribute "' + iCommand.values.attributeName + '" on graph';
+                    break;
+                case 'legendAttributeChange':
+                    message = 'plot attribute "' + iCommand.values.attributeName + '" on graph legend';
+                    break;
+                case 'edit':
+                    message = 'edit ' + iCommand.values.title;
+                    break;
+                case 'newDocumentState':
+                    this.storeCodapState(iCommand.values.state);
+                    break;
+                default:
+                    if (iCommand.values.globalValue) {
 
                     } else
                         message = iCommand.values.operation;
             }
             if (message !== '') {
-                let newID: number = this.state.stateID;
+                let oldID: number = this.state.stateID;
+                let newID: number = this.notifications.length;  //  the index of the NEXT notification
                 this.notifications.push({
                     message: message,
                     ID: newID,
+                    prev: oldID,
+                    next: -1,
                     isMarker: false,
                     codapStateDiff: []
                 });
+                if (oldID >= 0) this.linkFromOlderNotification(oldID, newID);
+
                 this.waitingForCodapState = true;
-                this.setState({numNotifications: this.notifications.length, stateID: newID + 1});
+                this.setState({numNotifications: this.notifications.length, stateID: newID});
             }
         }
+    }
+
+    /**
+     * Maintenance of the linked list fields in this.notifications.
+     *
+     * @param iOlderID
+     * @param iCurrentID
+     */
+    private linkFromOlderNotification(iOlderID: number, iCurrentID: number) {
+        let tOldNotification = this.notifications.find((n) => n.ID === iOlderID) as notification;
+        tOldNotification.next = iCurrentID;
     }
 
     /**
@@ -222,7 +255,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
      *
      * @param iID    the notification ID (which was set in React as the argument in the button's onChange() )
      */
-    private moveCodapState(iID: number) {
+    private async moveCodapState(iID: number) {
 
         // Detect situations in which we're trying to patch out of sequence
         function testPatch(iDiff: object, iState: object | null) {
@@ -241,16 +274,18 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         });
         if (tNotification) {
             let tCodapState = this.initialCodapState,
-                tIndex = 0,
+                tIndex = this.startingNotificationIndex,
                 tDone = false;
-            while (!tDone && tIndex < this.notifications.length) {
-                if (testPatch(this.notifications[tIndex].codapStateDiff, tCodapState)) {
-                    tCodapState = jiff.patch(this.notifications[tIndex].codapStateDiff, tCodapState);
+            while (!tDone && tIndex >= 0) {     //  because xxx.next = -1 if we're at the end
+                const tCurrentNotification = this.notifications[tIndex];
+                if (testPatch(tCurrentNotification.codapStateDiff, tCodapState)) {
+                    tCodapState = jiff.patch(tCurrentNotification.codapStateDiff, tCodapState);
                 }
-                tDone = this.notifications[tIndex].ID === iID;
-                tIndex++;
+                tDone = tCurrentNotification.ID === iID;
+                tIndex = tCurrentNotification.next;
             }
-            this.restoreCodapState(tCodapState);
+            await this.restoreCodapState(tCodapState);
+            this.setState({stateID: iID});
         } else {
             window.alert("Notification not found");
         }
@@ -280,9 +315,28 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
     public render() {
         let this_ = this;
 
-        {/*loop over all notifications; make a Marker for each*/
+        /*
+        Loop over all notifications; make a StoryEvent for each.
+        this.notifications is now a linked list, so we traverse the list...
+        */
+
+        let theNotifications = [];
+        let tIndex = this.startingNotificationIndex;
+
+        while (tIndex >= 0) {     //  because xxx.next = -1 if we're at the end
+            const tCurrentNotification = this.notifications[tIndex];
+            theNotifications.push(tCurrentNotification);
+            tIndex = tCurrentNotification.next;
         }
-        const theEvents = this_.notifications.map(
+        /*
+            ... to create theNotifications, an Array of the relevant notifications,
+            that is, all notifications that are in the current timeline, past and future :)
+
+            Then we loop through that new Array to make the event widgets
+        */
+
+
+        const theEvents = theNotifications.map(
             (aNotification) => {
                 const tID = aNotification.ID;
                 return (
@@ -292,6 +346,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                         onClick={(e: MouseEvent) => this_.onStoryEventClick(e, tID)}
                         theText={aNotification.message}
                         isMarker={aNotification.isMarker}
+                        isCurrent={tID === this_.state.stateID}
                     />
                 )
             }
@@ -300,19 +355,18 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         return (
             <div>
                 <div className="story-panel">
-					<div className="message">use option-click to toggle marker status</div>
+                    <div className="message">use option-click to toggle marker status</div>
                     <div className="story-area">
-                        {/*
-                    start with the Clear button
-*/}
+
+                        {/*  start with the Clear button */}
                         <div className="story-child clear-button"
                              onClick={this.clear}
                              title={"press to clear all of your markers"}
-                        >Clear
+                        >
+                            Clear
                         </div>
-                        {/*
-                    now the markers
-*/}
+
+                        {/*  now the storyEvents */}
                         {theEvents}
                     </div>
                 </div>
@@ -324,11 +378,11 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 
 function StoryEvent(props: any) {
     //	console.log("Rendering event " + props.ID + " (" + props.theText + ")");
-    const theClasses = props.isMarker ? "story-child marker" : "story-child event";
+    let theClasses = props.isMarker ? "story-child marker" : "story-child event";
+    if (props.isCurrent) theClasses += " current";
     return (
         <div className={theClasses}
              onClick={props.onClick}
-             onDoubleClick={props.onDoubleClick}
              title={props.theText}
         >
             {props.theText}
