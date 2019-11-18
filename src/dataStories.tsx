@@ -317,25 +317,23 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 
         /*
         Loop over all notifications; make a StoryEvent for each.
-        this.notifications is now a linked list, so we traverse the list...
+        this.notifications is now a linked list, so we traverse the list
+        to create theNotifications, an Array of the _relevant_ notifications,
+        that is, all notifications that are in the current timeline, past and future :)
         */
 
         let theNotifications = [];
         let tIndex = this.startingNotificationIndex;
 
-        while (tIndex >= 0) {     //  because xxx.next = -1 if we're at the end
+        while (tIndex >= 0) {     //  because xxx.next === -1 if we're at the end
             const tCurrentNotification = this.notifications[tIndex];
             theNotifications.push(tCurrentNotification);
             tIndex = tCurrentNotification.next;
         }
-        /*
-            ... to create theNotifications, an Array of the relevant notifications,
-            that is, all notifications that are in the current timeline, past and future :)
 
+        /*
             Then we loop through that new Array to make the event widgets
         */
-
-
         const theEvents = theNotifications.map(
             (aNotification) => {
                 const tID = aNotification.ID;
