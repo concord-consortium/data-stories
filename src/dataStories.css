@@ -1,9 +1,11 @@
 .App {
     text-align: center;
     background-color: #eee;
+
+
 }
 
-.story-panel {
+.story-panel-wide {
     display: flex;
     height: 52px;
     width: 95vw;
@@ -12,6 +14,26 @@
     overflow: auto;
 }
 
+.story-panel-tall {
+    background-color: #ccddee;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 96vw;
+    padding-left: 2vw;
+    text-align: left;
+    border: none;
+    overflow: auto;
+}
+
+.control-area {
+    display: flex;
+    height: 48px;
+    /* width : 90vw;    */
+    text-align: left;
+    border: none;
+    overflow: auto;
+}
 .story-area {
     display: flex;
     height: 48px;
@@ -19,6 +41,18 @@
     text-align: left;
     border: none;
     overflow: auto;
+}
+
+.focus-area {
+    /*
+    display: flex;
+    height: 48px;
+    width : 90vw;
+    */
+    text-align: left;
+    border: none;
+    overflow: auto;
+    font-size: 11px;
 }
 
 .message {
