@@ -7,11 +7,13 @@ export class StoryEventSet {
     private currentIndex:number = -1;
     private startingIndex:number = -1;
     private focusIndex: number = -1;
+    private parent: any;
 
     public initialCodapState: object | null = null;
 
-    constructor(props: any) {
+    constructor(iParent : any) {
         this.initializeToCodapState(null);
+        this.parent = iParent;
     }
 
     initializeToCodapState( iState: object | null) {

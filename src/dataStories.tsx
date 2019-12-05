@@ -34,7 +34,7 @@ interface IStringKeyedObject {
 
 class StoryArea extends Component<{}, { numNotifications: number, stateID: number, storyMode: string }> {
     private currentCodapState: object | null = null;   //      todo: do we need this here?
-    private storyEvents: StoryEventSet = new StoryEventSet({});
+    private storyEvents: StoryEventSet = new StoryEventSet( this );
     private waitingForCodapState = false;	// When true, we expect CODAP to notify us of a new state
     private restoreInProgress = false;
     private componentMap: IStringKeyedObject = {
