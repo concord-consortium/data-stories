@@ -4,7 +4,6 @@ import {initializePlugin} from './lib/codap-helper';
 import {StoryEventSet} from './story-event-set';
 import {StoryEvent, StoryEventModel} from './story-event';
 import './dataStories.css';
-import jiff from "jiff";
 
 const kPluginName = "DataStories";
 const kVersion = "0.1";
@@ -17,37 +16,15 @@ const kInitialTallDimensions = {
     height: 555
 };
 
-/*
-Problems pending as of Thanksgiving morning
-
-I have created the storyMode member thingy to distinguish the purpose from the "shape."
-I suspect that we need to possibly save the shape and compare it to the mode in render() and make the shape change then rather than in changeStoryMode.
-We are sometimes seeing the scrubber events in "tall" mode. Or rather, we are somehow getting into :"wide" without changing the shape.
-
-Worse, some obvious events are getting created (create slider) but then not being properly restored.
-How can that happen when it was working before??
- */
 
 interface IStringKeyedObject {
     [key: string]: string;
 }
 
 class StoryArea extends Component<{}, { numNotifications: number, stateID: number, storyMode: string }> {
-    private currentCodapState: object | null = null;   //      todo: do we need this here?
     private storyEvents: StoryEventSet = new StoryEventSet( this );
     private waitingForCodapState = false;	// When true, we expect CODAP to notify us of a new state
     private restoreInProgress = false;
-    private componentMap: IStringKeyedObject = {
-        'DG.GameView': 'plugin',
-        'DG.GraphView': 'graph',
-        'DG.MapView': 'map',
-        'DG.SliderView': 'slider',
-        'DG.TextView': 'text',
-        'DG.Calculator': 'calculator',
-        'DG.TableView': 'case table',
-        'DG.CaseCard': 'case card',
-        'calcView': 'Calculator'
-    };
 
     constructor(props: any) {
         super(props);
@@ -96,28 +73,11 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
      * Reset the notifications array and force a redraw.
      */
     private clear(): void {
-        this.storyEvents.initializeToCodapState(this.currentCodapState);
+        this.storyEvents.initializeToCodapState(this.storyEvents.currentCodapState);
         console.log("In clear()");
         this.setState({stateID: this.state.stateID});
     };
 
-    /**
-     * todo: consider how much could be moved to the storyEventSet; especially the currentCodapState
-     *
-     * @param iCodapState
-     */
-    private storeCodapState(iCodapState: object): void {
-        if (this.restoreInProgress || !this.waitingForCodapState) return;
-
-        if (!this.storyEvents.initialCodapState) {
-            this.storyEvents.initialCodapState = iCodapState;
-        } else {
-            this.waitingForCodapState = false;
-            const theCurrentEvent = this.storyEvents.currentStoryEvent();
-            if (theCurrentEvent) theCurrentEvent.codapStateDiff = jiff.diff(this.currentCodapState, iCodapState);
-        }
-        this.currentCodapState = iCodapState;
-    }
 
     /**
      * The Kahuna of this component;
@@ -127,81 +87,16 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
      * @param iCommand    the Command resulting from the user action
      */
     private handleNotification(iCommand: any): void {
-        function formComponentMessage() {
-            let cMsg = '',
-                cTitle = ' ' + (iCommand.values.title || '');
-            if (iCommand.values.type === 'calculator') {
-                cMsg = 'Calculator'
-            } else {
-                cMsg = iCommand.values.type + cTitle;
-            }
-            return cMsg;
-        }
-
         if (this.restoreInProgress)
             return;
-        if (iCommand.resource !== 'undoChangeNotice') {
-            let notificationTitle = '',
-                numCases = 0;
 
-            iCommand.values.type = this.componentMap[iCommand.values.type] || iCommand.values.type;
-            switch (iCommand.values.operation) {
-                case 'createCases':
-                    numCases = iCommand.values.result.caseIDs.length;
-                    notificationTitle = 'create ' + numCases + (numCases > 1 ? ' cases' : ' case');
-                    break;
-                case 'create':
-                    notificationTitle = 'create ' + formComponentMessage();
-                    break;
-                case 'delete':
-                    notificationTitle = 'delete ' + formComponentMessage();
-                    break;
-                case 'beginMoveOrResize':
-                    break;
-                case 'move':
-                case 'resize':
-                    notificationTitle = iCommand.values.operation + ' ' + formComponentMessage();
-                    break;
-                case 'selectCases':
-                    if (iCommand.values.result.cases) {
-                        numCases = iCommand.values.result.cases.length;
-                        notificationTitle = 'select ' + numCases + ' case' + (numCases > 1 ? 's' : '');
-                    }
-                    break;
-                case 'hideSelected':
-                    notificationTitle = 'hide selected cases';
-                    break;
-                case 'attributeChange':
-                    notificationTitle = 'plot attribute "' + iCommand.values.attributeName + '" on graph';
-                    break;
-                case 'legendAttributeChange':
-                    notificationTitle = 'plot attribute "' + iCommand.values.attributeName + '" on graph legend';
-                    break;
-                case 'edit':
-                    notificationTitle = 'edit ' + iCommand.values.title;
-                    break;
-                case 'newDocumentState':
-                    this.storeCodapState(iCommand.values.state);
-                    break;
-                default:
-                    if (iCommand.values.globalValue) {
+        const handlerResult:any = this.storyEvents.handleNotification(iCommand);
 
-                    } else
-                        notificationTitle = iCommand.values.operation;
-            }
-            /*
-            The idea is this: When the user does something undoable (e.g., create slider)
-            the first notification is for that creation; at that point we create a new StoryEvent for that and
-            append it to the list.
-            LATER, CODAP has figured out the new state of the document, and issues a newDocumentState notification,
-            at which point we compute the difference from the previous document state and insert it (storeCodapStae())
-            in the StoryEvent that we just created in its codapStateDiff field.
-             */
-            if (notificationTitle !== '') {
-                const tEvent = this.storyEvents.addNewStoryEvent(notificationTitle);
-                this.waitingForCodapState = true;
-                this.setState({numNotifications: this.storyEvents.length(), stateID: tEvent.ID});
-            }
+        this.waitingForCodapState = handlerResult.waiting;
+        if (handlerResult.doSetState) {
+            this.setState({
+                numNotifications: this.storyEvents.length(),
+                stateID: handlerResult.newEvent.ID});
         }
     }
 
@@ -243,6 +138,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
             console.log("   restored with components: " + theComponents.reduce((a: string, v: any) => {
                 return (a + v.type + " ");
             }));
+            this.storyEvents.setCurrentIndex(iID);
             this.setState({stateID: iID});
         } else {
             window.alert("Notification not found");
@@ -273,33 +169,9 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         let this_ = this;
 
         /*
-        Loop over all notifications; make a StoryEvent for each.
-        this.notifications is now a linked list, so we traverse the list
-        to create theNotifications, an Array of the _relevant_ notifications,
-        that is, all notifications that are in the current timeline, past and future :)
+        Begin with a div that can contain various controls;
+        it's not part of the list of events or the editing controls for a particular event.
         */
-
-        const storyEventsOnThisTimeline = this.storyEvents.storyEventsOnThisTimeline();
-        const theFocusStoryEvent: StoryEventModel | undefined = this.storyEvents.focusStoryEvent();
-
-        /*
-            Then we loop through that new Array to make the event widgets
-        */
-        const theEvents = storyEventsOnThisTimeline.map(
-            (aSE) => {
-                const tID = aSE.ID;
-                return (
-                    <StoryEvent
-                        key={aSE.ID}
-                        onClick={(e: MouseEvent) => this_.onStoryEventClick(e, tID)}
-                        isCurrent={tID === this_.state.stateID}
-                        theText={aSE.title}
-                        isMarker={aSE.isMarker}
-                    />
-                )
-            }
-        );
-
         const controlArea = (
             <div className="control-area">
                 <div className="message">use option-click to toggle marker status</div>
@@ -314,11 +186,43 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
             </div>
         );
 
+        /*
+        Loop over all story events; make a StoryEvent for each.
+        this.storyEvents.storyEvents is now a linked list, so we traverse the list
+        to create theEvents, an Array of the _relevant_ storyEvents,
+        that is, all storyEvents that are in the current timeline, past and future :)
+        */
+
+        const storyEventsOnThisTimeline = this.storyEvents.storyEventsOnThisTimeline();
+
+        /*
+            Then we loop through that new Array to make the event widgets
+        */
+        const theEvents = storyEventsOnThisTimeline.map(
+            (aSE) => {
+                return (
+                    <StoryEvent
+                        key={aSE.ID}
+                        onClick={(e: MouseEvent) => this_.onStoryEventClick(e, aSE.ID)}
+                        isCurrent={aSE.ID === this_.storyEvents.getCurrentIndex()}
+                        theText={aSE.title}
+                        isMarker={aSE.isMarker}
+                    />
+                )
+            }
+        );
+
         const eventsArea = (
             <div className="story-area">
                 {theEvents}
             </div>
         );
+
+        /*
+        If we are editing (focusing on) a particular event, we look in detail at that event,
+        which we call theFOcusStoryEvent.
+         */
+        const theFocusStoryEvent: StoryEventModel | undefined = this.storyEvents.focusStoryEvent();
 
         const focusArea = (theFocusStoryEvent !== undefined) ?
             (
@@ -334,7 +238,6 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                         id="checkboxSetMarker"
                         checked={theFocusStoryEvent.isMarker}
                         onChange={() => {
-                            const theElement = document.getElementById("checkboxSetMarker");
                             theFocusStoryEvent.setMarker(!theFocusStoryEvent.isMarker);
                             this.forceRender();
                         }}
