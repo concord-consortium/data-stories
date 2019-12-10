@@ -80,9 +80,9 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 
 
     /**
-     * The Kahuna of this component;
-     * responsible for handling the various notifications we receive
-     * when the user makes an undoable action.
+     * Responsible for handling the various notifications we receive
+     * when the user makes an undoable action,
+     * and also when CODAP respomds to our requests to move to a different codapState
      *
      * @param iCommand    the Command resulting from the user action
      */
@@ -92,12 +92,14 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 
         const handlerResult:any = this.storyEvents.handleNotification(iCommand);
 
-        this.waitingForCodapState = handlerResult.waiting;
+        //  this.waitingForCodapState = handlerResult.waiting;
+
         if (handlerResult.doSetState) {
             this.setState({
                 numNotifications: this.storyEvents.length(),
-                stateID: handlerResult.newEvent.ID});
+                stateID: this.storyEvents.length()});
         }
+
     }
 
 
@@ -128,20 +130,17 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
      *
      * @param iID    the notification ID (which was set in React as the argument in the button's onChange() )
      */
-    private async moveCodapState(iID: number) {
+    private async travelToCodapStateByEventNumber(iID: number) {
 
-        const tCodapState: any | null = this.storyEvents.getStateByStoryEventID(iID);
+        const tCodapState: any | null = this.storyEvents.constructStateToTravelTo(iID);
 
         if (tCodapState) {
             await this.restoreCodapState(tCodapState);
-            const theComponents = tCodapState["components"];
-            console.log("   restored with components: " + theComponents.reduce((a: string, v: any) => {
-                return (a + v.type + " ");
-            }));
+            console.log("   restored to: " + this.storyEvents.stateInfoString(tCodapState));
             this.storyEvents.setCurrentIndex(iID);
             this.setState({stateID: iID});
         } else {
-            window.alert("Notification not found");
+            window.alert("trying to time-travel but could not find event " + iID);
         }
     }
 
@@ -156,7 +155,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                 //  this.forceRender();
             } else {
                 console.log('Click; go to event [' + tStoryEvent.title + ']');
-                this_.moveCodapState(iID);
+                this_.travelToCodapStateByEventNumber(iID);
             }
         }
     }
