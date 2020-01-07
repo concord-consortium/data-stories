@@ -4,7 +4,7 @@ interface IStringKeyedObject {
     [key: string]: string;
 }
 
-export class StoryEventModel {
+export class Moment {
 
     public ID: number = -1;     //  todo: do we need this at all?
     public prev: number = -1;
@@ -29,11 +29,11 @@ export class StoryEventModel {
     };
 
     constructor(iCommand: any) {
-        const theNewEventTitle = (iCommand.values) ?
+        const theNewMomentTitle = (iCommand.values) ?
             this.parseCommand(iCommand).title :
             iCommand;
 
-        this.setTitle(theNewEventTitle);
+        this.setTitle(theNewMomentTitle);
     }
 
     parseCommand(iCommand: any): any {
@@ -52,53 +52,53 @@ export class StoryEventModel {
             return cMsg;
         }
 
-        let theNewEventTitle = '',
+        let theNewMomentTitle = '',
             numCases = 0;
 
         iCommand.values.type = this.componentMap[iCommand.values.type] || iCommand.values.type;
         switch (iCommand.values.operation) {
             case 'createCases':
                 numCases = iCommand.values.result.caseIDs.length;
-                theNewEventTitle = 'create ' + numCases + (numCases > 1 ? ' cases' : ' case');
+                theNewMomentTitle = 'create ' + numCases + (numCases > 1 ? ' cases' : ' case');
                 break;
             case 'create':
-                theNewEventTitle = 'create ' + formComponentMessage();
+                theNewMomentTitle = 'create ' + formComponentMessage();
                 break;
             case 'delete':
-                theNewEventTitle = 'delete ' + formComponentMessage();
+                theNewMomentTitle = 'delete ' + formComponentMessage();
                 break;
             case 'beginMoveOrResize':
                 break;
             case 'move':
             case 'resize':
-                theNewEventTitle = iCommand.values.operation + ' ' + formComponentMessage();
+                theNewMomentTitle = iCommand.values.operation + ' ' + formComponentMessage();
                 break;
             case 'selectCases':
                 if (iCommand.values.result.cases) {
                     numCases = iCommand.values.result.cases.length;
-                    theNewEventTitle = 'select ' + numCases + ' case' + (numCases > 1 ? 's' : '');
+                    theNewMomentTitle = 'select ' + numCases + ' case' + (numCases > 1 ? 's' : '');
                 }
                 break;
             case 'hideSelected':
-                theNewEventTitle = 'hide selected cases';
+                theNewMomentTitle = 'hide selected cases';
                 break;
             case 'attributeChange':
-                theNewEventTitle = 'plot attribute "' + iCommand.values.attributeName + '" on graph';
+                theNewMomentTitle = 'plot attribute "' + iCommand.values.attributeName + '" on graph';
                 break;
             case 'legendAttributeChange':
-                theNewEventTitle = 'plot attribute "' + iCommand.values.attributeName + '" on graph legend';
+                theNewMomentTitle = 'plot attribute "' + iCommand.values.attributeName + '" on graph legend';
                 break;
             case 'edit':
-                theNewEventTitle = 'edit ' + iCommand.values.title;
+                theNewMomentTitle = 'edit ' + iCommand.values.title;
                 break;
             default:
                 if (iCommand.values.globalValue) {
-                    theNewEventTitle = "change slider";
+                    theNewMomentTitle = "change slider";
                 } else {
-                    theNewEventTitle = iCommand.values.operation;
+                    theNewMomentTitle = iCommand.values.operation;
                 }
         }
-        out.title = theNewEventTitle;
+        out.title = theNewMomentTitle;
         return out;
     }
 
@@ -117,7 +117,7 @@ export class StoryEventModel {
     }
 }
 
-export function StoryEvent(props: any) {
+export function MomentView(props: any) {
     let theClasses = props.isMarker ? "story-child marker" : "story-child event";
     if (props.isCurrent) theClasses += " current";
     return (

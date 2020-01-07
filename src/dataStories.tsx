@@ -1,8 +1,8 @@
 import React, {Component} from 'react';
 import codapInterface from "./lib/CodapInterface";
 import {initializePlugin} from './lib/codap-helper';
-import {StoryEventSet} from './story-event-set';
-import {StoryEvent, StoryEventModel} from './story-event';
+import {Timeline} from './timeline';
+import {MomentView, Moment} from './moment';
 import './dataStories.css';
 
 const kPluginName = "DataStories";
@@ -22,7 +22,7 @@ interface IStringKeyedObject {
 }
 
 class StoryArea extends Component<{}, { numNotifications: number, stateID: number, storyMode: string }> {
-    private storyEvents: StoryEventSet = new StoryEventSet( this );
+    private timeline: Timeline = new Timeline( this );
     private waitingForCodapState = false;	// When true, we expect CODAP to notify us of a new state
     private restoreInProgress = false;
 
@@ -50,12 +50,12 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
     /**
      * Toggle story mode between `scrubber` and `focus`.
      * Change the shape of the Iframe, then change the (React) state;
-     * then, on render(), actually display different material (e.g., detailed info on an event when `state.storyMode` is `scrubber`.)
+     * then, on render(), actually display different material (e.g., detailed info on a moment when `state.storyMode` is `scrubber`.)
      */
     private changeStoryMode(): void {
 
         const newMode = (this.state.storyMode === 'focus') ? 'scrubber' : 'focus';
-        this.storyEvents.setFocusIndex((newMode === 'focus') ? this.state.stateID : -1);
+        this.timeline.setFocusIndex((newMode === 'focus') ? this.state.stateID : -1);        //  todo: check this use of stateID
 
         const theMessage = {
             action: "update",
@@ -68,12 +68,15 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         this.setState({storyMode: newMode});
     }
 
+    private combineMoments(): void {
+        this.timeline.doCombineMoments();
+    }
 
     /**
      * Reset the notifications array and force a redraw.
      */
     private clear(): void {
-        this.storyEvents.initializeToCodapState(this.storyEvents.currentCodapState);
+        this.timeline.initializeToCodapState(this.timeline.currentCodapState);
         console.log("In clear()");
         this.setState({stateID: this.state.stateID});
     };
@@ -90,14 +93,14 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         if (this.restoreInProgress)
             return;
 
-        const handlerResult:any = this.storyEvents.handleNotification(iCommand);
+        const handlerResult:any = this.timeline.handleNotification(iCommand);
 
         //  this.waitingForCodapState = handlerResult.waiting;
 
         if (handlerResult.doSetState) {
             this.setState({
-                numNotifications: this.storyEvents.length(),
-                stateID: this.storyEvents.length()});
+                numNotifications: this.timeline.length(),
+                stateID: this.timeline.length()});
         }
 
     }
@@ -130,38 +133,38 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
      *
      * @param iID    the notification ID (which was set in React as the argument in the button's onChange() )
      */
-    private async travelToCodapStateByEventNumber(iID: number) {
+    private async travelToCodapStateByMomentNumber(iID: number) {
 
-        const tCodapState: any | null = this.storyEvents.constructStateToTravelTo(iID);
+        const tCodapState: any | null = this.timeline.constructStateToTravelTo(iID);
 
         if (tCodapState) {
             await this.restoreCodapState(tCodapState);
-            console.log("   restored to: " + this.storyEvents.stateInfoString(tCodapState));
-            this.storyEvents.setCurrentIndex(iID);
+            console.log("   restored to: " + this.timeline.stateInfoString(tCodapState));
+            this.timeline.setCurrentIndex(iID);
             this.setState({stateID: iID});
         } else {
-            window.alert("trying to time-travel but could not find event " + iID);
+            window.alert("trying to time-travel but could not find moment " + iID);
         }
     }
 
-    public onStoryEventClick(e: MouseEvent, iID: number) {
-        //  this.focusEventIndex = iID;
+    public onMomentClick(e: MouseEvent, iID: number) {
+        //  this.focusMomentIndex = iID;
         let this_ = this;
-        let tStoryEvent = this.storyEvents.storyEventByStoryEventID(iID);
-        if (tStoryEvent) {
+        let tMoment = this.timeline.momentByID(iID);
+        if (tMoment) {
             if (e.altKey) {
-                tStoryEvent.setMarker(!tStoryEvent.isMarker);
+                tMoment.setMarker(!tMoment.isMarker);
                 console.log("alt click on " + iID + "; swap marker value!");
                 //  this.forceRender();
             } else {
-                console.log('Click; go to event [' + tStoryEvent.title + ']');
-                this_.travelToCodapStateByEventNumber(iID);
+                console.log('Click; go to moment [' + tMoment.title + ']');
+                this_.travelToCodapStateByMomentNumber(iID);
             }
         }
     }
 
     public forceRender() {
-        this.setState({numNotifications: this.storyEvents.length()});
+        this.setState({numNotifications: this.timeline.length()});
     }
 
     public render() {
@@ -169,7 +172,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 
         /*
         Begin with a div that can contain various controls;
-        it's not part of the list of events or the editing controls for a particular event.
+        it's not part of the list of moments or the editing controls for a particular moment.
         */
         const controlArea = (
             <div className="control-area">
@@ -178,66 +181,72 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                 {/*  start with the Focus button */}
                 <div className="story-child clear-button"
                      onClick={this.changeStoryMode}
-                     title={"press to focus on the current event"}
+                     title={"press to focus on the current moment"}
                 >
                     {this.state.storyMode === "scrubber" ? "Focus" : "back to timeline"}
+                </div>
+                <div className="story-child clear-button"
+                     onClick={this.combineMoments}
+                     title={"combine the current moment with the previous one"}
+                >
+                    {"combine"}
                 </div>
             </div>
         );
 
         /*
-        Loop over all story events; make a StoryEvent for each.
-        this.storyEvents.storyEvents is now a linked list, so we traverse the list
-        to create theEvents, an Array of the _relevant_ storyEvents,
-        that is, all storyEvents that are in the current timeline, past and future :)
+        Loop over all [story] moments; make a Moment for each.
+        this.timeline.timeline is now a linked list, so we traverse the list
+        to create theMoments, an Array of Moments on the _relevant_ timeline,
+        that is, all timeline that are in the current timeline, past and future :)
         */
 
-        const storyEventsOnThisTimeline = this.storyEvents.storyEventsOnThisTimeline();
+        const momentsOnThisTimeline = this.timeline.momentsOnThisTimeline();
 
         /*
-            Then we loop through that new Array to make the event widgets
+            Then we loop through that new Array to make the Moment widgets
         */
-        const theEvents = storyEventsOnThisTimeline.map(
-            (aSE) => {
+        const theMoments = momentsOnThisTimeline.map(
+            (aMoment) => {
                 return (
-                    <StoryEvent
-                        key={aSE.ID}
-                        onClick={(e: MouseEvent) => this_.onStoryEventClick(e, aSE.ID)}
-                        isCurrent={aSE.ID === this_.storyEvents.getCurrentIndex()}
-                        theText={aSE.title}
-                        isMarker={aSE.isMarker}
+                    <MomentView
+                        key={aMoment.ID}
+                        onClick={(e: MouseEvent) => this_.onMomentClick(e, aMoment.ID)}
+                        isCurrent={aMoment.ID === this_.timeline.getCurrentIndex()}
+                        theText={aMoment.title}
+                        isMarker={aMoment.isMarker}
                     />
                 )
             }
         );
 
-        const eventsArea = (
+        const momentsArea = (
             <div className="story-area">
-                {theEvents}
+                {theMoments}
             </div>
         );
 
         /*
-        If we are editing (focusing on) a particular event, we look in detail at that event,
-        which we call theFOcusStoryEvent.
+        If we are editing (focusing on) a particular moment, we look in detail at that moment,
+        which we call theFocusMoment.
          */
-        const theFocusStoryEvent: StoryEventModel | undefined = this.storyEvents.focusStoryEvent();
+        const theFocusMoment: Moment | undefined = this.timeline.focusMoment();
 
-        const focusArea = (theFocusStoryEvent !== undefined) ?
+        const focusArea = (theFocusMoment !== undefined) ?
             (
                 <div className="focus-area">
                     <p>
-                        Event {theFocusStoryEvent.ID}:&nbsp;
-                        <b>{theFocusStoryEvent.title}</b>&nbsp;
-                        ({theFocusStoryEvent.created.toLocaleTimeString()})
+                        Moment {theFocusMoment.ID}:&nbsp;
+                        <b>{theFocusMoment.title}</b>&nbsp;
+                        ({theFocusMoment.created.toLocaleTimeString()})
                     </p>
                     <label htmlFor="checkboxSetMarker">Marker?</label>
                     <input
                         type="checkbox"
                         id="checkboxSetMarker"
-                        checked={theFocusStoryEvent.isMarker}
+                        checked={theFocusMoment.isMarker}
                         onChange={() => {
-                            theFocusStoryEvent.setMarker(!theFocusStoryEvent.isMarker);
+                            theFocusMoment.setMarker(!theFocusMoment.isMarker);
                             this.forceRender();
                         }}
                     />
@@ -245,21 +254,21 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                     narrative:<br/>
                     <textarea
                         rows={5}
-                        value={theFocusStoryEvent.narrative}
+                        value={theFocusMoment.narrative}
                         onChange={(e) => {
                             const theText: string = e.target.value;
-                            theFocusStoryEvent.setNarrative(theText);
+                            theFocusMoment.setNarrative(theText);
                             this.forceRender();
                         }}
                     />
                 </div>
             ) : (
                 <div className="focus-area">
-                    <p>There is no event to report on; the focus event was found in the list!</p>
+                    <p>There is no moment to report on; the focus moment was not found in the list!</p>
                 </div>
             );
 
-        const theContent = (this.state.storyMode === "scrubber") ? eventsArea : focusArea;
+        const theContent = (this.state.storyMode === "scrubber") ? momentsArea : focusArea;
         const theStoryPanelStyle = (this.state.storyMode === "scrubber") ? "story-panel-wide" : "story-panel-tall";
 
         return (
