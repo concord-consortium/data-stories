@@ -10,6 +10,7 @@ export class Moment {
     public prev: number = -1;
     public next: number = -1;
     public codapStateDiff: [number, object][] = [];
+    public  codapState: object = {};
 
     public isMarker: boolean = false;
     public title: string = "";
@@ -28,12 +29,9 @@ export class Moment {
         'calcView': 'Calculator'
     };
 
-    constructor(iCommand: any) {
-        const theNewMomentTitle = (iCommand.values) ?
-            this.parseCommand(iCommand).title :
-            iCommand;
-
-        this.setTitle(theNewMomentTitle);
+    constructor(iState: any) {
+        this.codapState = iState;
+        this.setTitle("moment");
     }
 
     parseCommand(iCommand: any): any {

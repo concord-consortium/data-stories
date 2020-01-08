@@ -22,7 +22,7 @@ interface IStringKeyedObject {
 }
 
 class StoryArea extends Component<{}, { numNotifications: number, stateID: number, storyMode: string }> {
-    private timeline: Timeline = new Timeline( this );
+    private timeline: Timeline = new Timeline(this);
     private waitingForCodapState = false;	// When true, we expect CODAP to notify us of a new state
     private restoreInProgress = false;
 
@@ -33,6 +33,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         this.handleNotification = this.handleNotification.bind(this);
         this.clear = this.clear.bind(this);
         this.changeStoryMode = this.changeStoryMode.bind(this);
+        this.onMakeMarker = this.onMakeMarker.bind(this);
 
         codapInterface.on('notify', '*', '', this.handleNotification);
         // Get the initial state
@@ -68,10 +69,6 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         this.setState({storyMode: newMode});
     }
 
-    private combineMoments(): void {
-        this.timeline.doCombineMoments();
-    }
-
     /**
      * Reset the notifications array and force a redraw.
      */
@@ -93,15 +90,15 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         if (this.restoreInProgress)
             return;
 
-        const handlerResult:any = this.timeline.handleNotification(iCommand);
+        const handlerResult: any = this.timeline.handleNotification(iCommand);
 
-        //  this.waitingForCodapState = handlerResult.waiting;
-
-        if (handlerResult.doSetState) {
-            this.setState({
-                numNotifications: this.timeline.length(),
-                stateID: this.timeline.length()});
-        }
+        /*
+                if (handlerResult.doSetState) {
+                    this.setState({
+                        numNotifications: this.timeline.length(),
+                        stateID: this.timeline.length()});
+                }
+        */
 
     }
 
@@ -112,11 +109,12 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
      *
      * @param iCodapState    the state to restore to; this is the potentially large JSON object
      */
-    private restoreCodapState(iCodapState: object | null) {
+    private restoreCodapState(iCodapState: object | null): any {
+        let out: any = null;
         if (iCodapState) {
             let this_ = this;
             this.restoreInProgress = true;
-            codapInterface.sendRequest({
+            out = codapInterface.sendRequest({
                 action: 'update',
                 resource: 'document',
                 values: iCodapState
@@ -124,6 +122,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                 this_.restoreInProgress = false;
             });
         }
+        return out;
     }
 
     /**
@@ -147,20 +146,20 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         }
     }
 
-    public onMomentClick(e: MouseEvent, iID: number) {
+    public async onMomentClick(e: MouseEvent, iID: number) {
         //  this.focusMomentIndex = iID;
         let this_ = this;
-        let tMoment = this.timeline.momentByID(iID);
+        let tMoment = this.timeline.onMomentClick(iID);
         if (tMoment) {
-            if (e.altKey) {
-                tMoment.setMarker(!tMoment.isMarker);
-                console.log("alt click on " + iID + "; swap marker value!");
-                //  this.forceRender();
-            } else {
-                console.log('Click; go to moment [' + tMoment.title + ']');
-                this_.travelToCodapStateByMomentNumber(iID);
-            }
+            console.log('Click; go to moment [' + tMoment.title + ']');
+            const theResult = await this.restoreCodapState(tMoment.codapState);
+            this.forceRender();
         }
+    }
+
+    public onMakeMarker() {
+        this.timeline.makeMarkerOnDemand();
+        this.forceRender();
     }
 
     public forceRender() {
@@ -186,11 +185,19 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                     {this.state.storyMode === "scrubber" ? "Focus" : "back to timeline"}
                 </div>
                 <div className="story-child clear-button"
+                     onClick={this.onMakeMarker}
+                     title={"mark the current state"}
+                >
+                    {"mark!"}
+                </div>
+                {/*
+                <div className="story-child clear-button"
                      onClick={this.combineMoments}
                      title={"combine the current moment with the previous one"}
                 >
                     {"combine"}
                 </div>
+*/}
             </div>
         );
 
@@ -326,7 +333,7 @@ class DataStories
                     const adjustPluginMessage = {
                         'action': 'update',
                         'resource': 'component[' + thePluginID + ']',
-                        'values': {'position': positionValues, 'cannotClose' : true}
+                        'values': {'position': positionValues, 'cannotClose': true}
                     };
                     console.log('trying to adjust the plugin with ' + JSON.stringify(adjustPluginMessage));
                     codapInterface.sendRequest(adjustPluginMessage).then(

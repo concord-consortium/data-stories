@@ -14,12 +14,15 @@ export class Timeline {
     public currentCodapState: object | null = null;
 
     constructor(iParent: any) {
+        //  todo: get actual codap state here
         this.initializeToCodapState(null);
         this.parent = iParent;
     }
 
     initializeToCodapState(iState: object | null) {
         this.initialCodapState = iState;
+        this.currentCodapState = iState;
+
         this.setInitialMoment();
     }
 
@@ -43,25 +46,32 @@ export class Timeline {
     }
 
     /**
+     * Called from above. User has clicked ona particular moment, so we are about to time travel there.
+     * Adjust this timeline (model) so that everything is set correctly.
+     * @param iID
+     */
+    onMomentClick(iID : number): Moment {
+        const tMoment = this.moments[iID];
+        this.setCurrentIndex(iID);
+        this.currentCodapState = tMoment.codapState;
+
+        return tMoment;
+    }
+
+    /**
      * Blank the array of moments,
      * and create a new initial Moment, called "start"
      */
     setInitialMoment() {
         this.moments = [];
         this.currentIndex = -1;
-        let tMoment: Moment = this.addNewMoment("start");
-        this.startingIndex = tMoment.ID;
-        this.focusIndex = tMoment.ID;
+        let tMoment = this.makeMarkerOnDemand();
+        tMoment.title = "start";
+        this.setStartingIndex(tMoment.ID);
+        this.setFocusIndex(tMoment.ID);
         tMoment.setMarker(true);
     }
 
-
-    checkForCollapse(now: Moment | undefined, next: Moment): boolean {
-        if (now === undefined || now.prev < 0) return false;
-        const dt = next.created.getTime() - now.created.getTime();  //  in milliseconds
-
-        return (dt < 100);
-    }
 
     length() {
         return this.moments.length;
@@ -97,7 +107,9 @@ export class Timeline {
             out.push(nextMoment);
             xSE = nextMoment.next;
         }
-        return out;
+        //  return out;
+
+        return this.moments;
     }
 
 
@@ -151,108 +163,15 @@ export class Timeline {
         return tCodapState;     //  null if there is no storyMoment corresponding to iID
     }
 
-    public doCombineMoments(): void {
 
-        const momentAndStateParams:any = this.prepareToCombineMoments();
-        if (momentAndStateParams.OK) {
-            const theCombinedMoment : any = this.combineCurrentMomentWithPrevious(momentAndStateParams);
-            
-            //  now replace the last two moments with this new one...
-            this.currentIndex = theCombinedMoment.prevMoment.ID;
+    makeMarkerOnDemand(): Moment {
+        let tNewMoment : Moment = new Moment(this.currentCodapState);
+        tNewMoment.ID = this.moments.length;
+        tNewMoment.title = "M " + tNewMoment.ID;
 
-            theCombinedMoment.prevMoment.next = theCombinedMoment.latestMoment.next;
-            if (theCombinedMoment.latestMoment.next >= 0) {
-                let theNextMoment = this.momentByID(theCombinedMoment.latestMoment.next);
-                if (theNextMoment) {
-                    theNextMoment.prev = theCombinedMoment.prevMoment.ID;
-                }
-            }
-
-            //  more here! especially, need to actually put  the new moment into the list
-            //  and where is that moment, anyway?!
-        }
-    }
-
-    private prepareToCombineMoments(): object {
-        let out : object = {OK : false};
-
-        const stateNow = this.currentCodapState;
-        const latestMoment = this.currentMoment();
-        if (latestMoment) {
-            const prevIndex = (latestMoment as Moment).prev;
-            const prevMoment = this.momentByID(prevIndex);     //  undefined if it doesn't exist
-            if (prevMoment) {
-                const stateBefore = (prevIndex === this.startingIndex) ?
-                    this.initialCodapState :
-                    this.getStateByMomentID(prevMoment.prev);
-                out = {
-                    stateNow : stateNow,
-                    stateBefore : stateBefore,
-                    latestMoment : latestMoment,
-                    prevMoment : prevMoment,
-                    OK : true
-                }
-            }
-        }
-        return out;
-    }
-
-    private combineCurrentMomentWithPrevious(iMomentParams:any):Moment | undefined {
-        let newTitle = "mixed moment";
-        let oMoment;
-                const diffInStateForBothMoments = jiff.diff(iMomentParams.stateBefore, iMomentParams.stateNow);
-                const syntheticNotification = {
-                    "title": newTitle
-                };
-                oMoment = new Moment(syntheticNotification);
-                oMoment.codapStateDiff = diffInStateForBothMoments;
-            return oMoment;
-    }
-
-    /**
-     * Do necessary computations for a new CODAP state:
-     * If we have none, install it as the initial state
-     * Return after that depending on flags in the parent
-     * Then compute (using jiff) the difference between the "old" state and this one;
-     * Finally, install this one as the official state.
-     *
-     * @param newCodapState   the new CODAP state (an object)
-     */
-    makeAndStoreNewMoment(newCodapState: object): void {
-        const oldMoment = this.currentMoment();
-        const oldCodapState = this.currentCodapState;
-
-        const newMoment = this.addNewMoment(this.notificationInWaiting);
-        if (newMoment) newMoment.codapStateDiff = jiff.diff(oldCodapState, newCodapState);
-        this.notificationInWaiting = null;
-
-        this.currentCodapState = newCodapState;
-    }
-
-    /**
-     * Add a Moment to our list, making appropriate adjustments to .next and .prev members.
-     * Note that this just adds the Moment; it does not (yet) have its codapStateDiff set.
-     * @param iCommand
-     */
-    addNewMoment(iCommand: any): Moment {
-        let tNextMoment: Moment = new Moment(iCommand);
-        let tCurrentMoment: Moment | undefined = this.currentMoment();
-
-        const tCollapse = this.checkForCollapse(tCurrentMoment, tNextMoment);
-        if (tCollapse) console.log("     •••••");
-
-        const newMomentIndex = this.moments.length;  //  length BEFORE the push
-        tNextMoment.ID = newMomentIndex;              //      needed?
-        tNextMoment.prev = this.currentIndex;        //  links back to "latest" Moment, -1 if there is none
-
-        //  set the "current" (soon to be prev) moment's "next" to point to the new index
-        if (this.currentIndex >= 0) {
-            this.moments[this.currentIndex].next = newMomentIndex;  //  link the old one to this one
-        }
-        this.moments.push(tNextMoment);
-        this.setCurrentIndex(newMomentIndex);
-
-        return tNextMoment;
+        this.moments.push(tNewMoment);
+        this.setCurrentIndex(tNewMoment.ID);
+        return tNewMoment;
     }
 
     handleNotification(iCommand: any): any {
@@ -266,6 +185,9 @@ export class Timeline {
         };
 
         /*
+        This method maintains this.currentCodapState.
+        We get sent the new state with a newDocumentState notification.
+
             The idea is this: When the user does something undoable (e.g., create slider)
             the first notification is for that creation; at that point we store that
             notification in `this.notificationInWaiting`.
@@ -283,9 +205,9 @@ export class Timeline {
                 } else if (this.parent.restoreInProgress) return;
 
                 else if (this.notificationInWaiting) {
-                    this.makeAndStoreNewMoment(tNewCodapState);
+                    //  this.makeAndStoreNewMoment(tNewCodapState);
                     this.notificationInWaiting = null;
-                    console.log("    new moment yields state: " + this.stateInfoString(tNewCodapState));
+                    //  console.log("    new moment yields state: " + this.stateInfoString(tNewCodapState));
                 } else {
                     console.log("    travel to state: " + this.stateInfoString(tNewCodapState));
 
@@ -298,7 +220,7 @@ export class Timeline {
                 if (this.notificationInWaiting) {
                     alert("unexpected notification!");
                 } else {
-                    this.notificationInWaiting = iCommand;  //  save this for later
+                    //  this.notificationInWaiting = iCommand;  //  save this for later
                 }
             }
         }
