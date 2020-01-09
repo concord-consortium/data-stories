@@ -16,14 +16,8 @@ const kInitialTallDimensions = {
     height: 555
 };
 
-
-interface IStringKeyedObject {
-    [key: string]: string;
-}
-
 class StoryArea extends Component<{}, { numNotifications: number, stateID: number, storyMode: string }> {
     private timeline: Timeline = new Timeline(this);
-    private waitingForCodapState = false;	// When true, we expect CODAP to notify us of a new state
     private restoreInProgress = false;
 
     constructor(props: any) {
@@ -56,7 +50,6 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
     private changeStoryMode(): void {
 
         const newMode = (this.state.storyMode === 'focus') ? 'scrubber' : 'focus';
-        this.timeline.setFocusIndex((newMode === 'focus') ? this.state.stateID : -1);        //  todo: check this use of stateID
 
         const theMessage = {
             action: "update",
@@ -87,18 +80,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
      * @param iCommand    the Command resulting from the user action
      */
     private handleNotification(iCommand: any): void {
-        if (this.restoreInProgress)
-            return;
-
-        const handlerResult: any = this.timeline.handleNotification(iCommand);
-
-        /*
-                if (handlerResult.doSetState) {
-                    this.setState({
-                        numNotifications: this.timeline.length(),
-                        stateID: this.timeline.length()});
-                }
-        */
+        this.timeline.handleNotification(iCommand);
 
     }
 
@@ -125,30 +107,8 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         return out;
     }
 
-    /**
-     * Called when the user presses the "go" button to select and implement a particular state.
-     * We get the notification number to go to, then reconstruct the state
-     * by looping though the notification array until we get to the given notification number.
-     *
-     * @param iID    the notification ID (which was set in React as the argument in the button's onChange() )
-     */
-    private async travelToCodapStateByMomentNumber(iID: number) {
-
-        const tCodapState: any | null = this.timeline.constructStateToTravelTo(iID);
-
-        if (tCodapState) {
-            await this.restoreCodapState(tCodapState);
-            console.log("   restored to: " + this.timeline.stateInfoString(tCodapState));
-            this.timeline.setCurrentIndex(iID);
-            this.setState({stateID: iID});
-        } else {
-            window.alert("trying to time-travel but could not find moment " + iID);
-        }
-    }
-
     public async onMomentClick(e: MouseEvent, iID: number) {
         //  this.focusMomentIndex = iID;
-        let this_ = this;
         let tMoment = this.timeline.onMomentClick(iID);
         if (tMoment) {
             console.log('Click; go to moment [' + tMoment.title + ']');
@@ -182,7 +142,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                      onClick={this.changeStoryMode}
                      title={"press to focus on the current moment"}
                 >
-                    {this.state.storyMode === "scrubber" ? "Focus" : "back to timeline"}
+                    {this.state.storyMode === "scrubber" ? "focus" : "back to timeline"}
                 </div>
                 <div className="story-child clear-button"
                      onClick={this.onMakeMarker}
@@ -190,14 +150,6 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                 >
                     {"mark!"}
                 </div>
-                {/*
-                <div className="story-child clear-button"
-                     onClick={this.combineMoments}
-                     title={"combine the current moment with the previous one"}
-                >
-                    {"combine"}
-                </div>
-*/}
             </div>
         );
 
@@ -237,27 +189,28 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         If we are editing (focusing on) a particular moment, we look in detail at that moment,
         which we call theFocusMoment.
          */
-        const theFocusMoment: Moment | undefined = this.timeline.focusMoment();
+        const theFocusMoment: Moment | undefined = this.timeline.currentMoment();       //  focusMoment();
 
         const focusArea = (theFocusMoment !== undefined) ?
             (
                 <div className="focus-area">
                     <p>
-                        Moment {theFocusMoment.ID}:&nbsp;
-                        <b>{theFocusMoment.title}</b>&nbsp;
-                        ({theFocusMoment.created.toLocaleTimeString()})
-                    </p>
-                    <label htmlFor="checkboxSetMarker">Marker?</label>
-                    <input
-                        type="checkbox"
-                        id="checkboxSetMarker"
-                        checked={theFocusMoment.isMarker}
-                        onChange={() => {
-                            theFocusMoment.setMarker(!theFocusMoment.isMarker);
+{/*
+                        <label for={"focusMomentTitleText"}>Moment {theFocusMoment.ID}</label>
+*/}
+                        <input
+                            id="focusMomentTitleText"
+                            type={"text"}
+                            value={theFocusMoment.title}
+                            onChange={(e) => {
+                            const theText: string = e.target.value;
+                            theFocusMoment.setTitle(theText);
                             this.forceRender();
                         }}
-                    />
-                    <br/>
+                        />
+                        ({theFocusMoment.created.toLocaleTimeString()})
+                    </p>
+
                     narrative:<br/>
                     <textarea
                         rows={5}
@@ -268,6 +221,17 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                             this.forceRender();
                         }}
                     />
+                    <label htmlFor="checkboxSetMarker">Marker?</label>
+                    <input
+                        type="checkbox"
+                        id="checkboxSetMarker"
+                        checked={theFocusMoment.isMarker}
+                        onChange={() => {
+                            theFocusMoment.setMarker(!theFocusMoment.isMarker);
+                            this.forceRender();
+                        }}
+                    />
+
                 </div>
             ) : (
                 <div className="focus-area">

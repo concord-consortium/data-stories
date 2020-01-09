@@ -7,7 +7,6 @@ export class Timeline {
     private notificationInWaiting: object | null = null;
     private currentIndex: number = -1;
     private startingIndex: number = -1;
-    private focusIndex: number = -1;
     private parent: any;
 
     public initialCodapState: object | null = null;
@@ -36,9 +35,6 @@ export class Timeline {
         console.log("Current index now " + i);
     }
 
-    setFocusIndex(i: number) {
-        this.focusIndex = i;
-    }
 
     setStartingIndex(i: number) {
         if (i < 0) i = 0;
@@ -68,7 +64,6 @@ export class Timeline {
         let tMoment = this.makeMarkerOnDemand();
         tMoment.title = "start";
         this.setStartingIndex(tMoment.ID);
-        this.setFocusIndex(tMoment.ID);
         tMoment.setMarker(true);
     }
 
@@ -85,10 +80,6 @@ export class Timeline {
         return this.moments.find(function (xSE) {
             return xSE.ID === iID
         });
-    }
-
-    focusMoment() {
-        return this.momentByID(this.focusIndex);
     }
 
     currentMoment() {
@@ -112,56 +103,6 @@ export class Timeline {
         return this.moments;
     }
 
-
-    /**
-     * Called from above; we get asked for a state based on a moment and its predecessors
-     * @param iID
-     */
-    constructStateToTravelTo(iID: number): object | null {
-        return this.getStateByMomentID(iID);
-    }
-
-    /**
-     * Start at the initialState and apply the differences until you get to the given moment ID.
-     * The result should be the CODAP state at that moment (after the notification occurred).
-     * @param iID
-     */
-    getStateByMomentID(iID: number): object | null {
-        // Detect situations in which we're trying to patch out of sequence
-        function testPatch(iDiff: object, iState: object | null) {
-            try {
-                jiff.patch(iDiff, iState);
-                return true;
-            } catch (e) {
-                window.alert(e);
-                debugger;
-                return false;
-            }
-        }
-
-        let tCodapState = null;
-        let dIndexArray = [];
-
-        let tMoment: Moment | undefined = this.momentByID(iID);   //  does the moment even exist?
-
-        if (tMoment) {
-            tCodapState = this.initialCodapState;
-            let tIndex = this.startingIndex,
-                tDone = false;
-            while (!tDone && tIndex >= 0) {     //  because xxx.next = -1 if we're at the end
-                dIndexArray.push(tIndex);
-
-                const aMoment = this.moments[tIndex];
-                if (testPatch(aMoment.codapStateDiff, tCodapState)) {
-                    tCodapState = jiff.patch(aMoment.codapStateDiff, tCodapState);
-                }
-                tDone = aMoment.ID === iID;
-                tIndex = aMoment.next;
-            }
-        }
-        console.log("Constructed state: \n\t[" + dIndexArray.join(" ") + "]\n\t" + this.stateInfoString(tCodapState));
-        return tCodapState;     //  null if there is no storyMoment corresponding to iID
-    }
 
 
     makeMarkerOnDemand(): Moment {
