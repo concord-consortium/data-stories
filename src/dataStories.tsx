@@ -117,10 +117,27 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         }
     }
 
-    public onMakeMarker() {
+    public async onMakeMarker() {
+        const theState =  this.getCodapState();  //  todo: not yet hooked up :)
         this.timeline.makeMarkerOnDemand();
         this.forceRender();
     }
+
+    private  getCodapState()  {
+        let this_ = this;
+        let theState:any;
+        const theMessage = {
+            action: 'get',
+            resource: 'interactiveFrame'
+        };
+        codapInterface.sendRequest(theMessage).then(
+            (result) => {
+                theState = result;
+            }
+        );
+    }
+
+
 
     public forceRender() {
         this.setState({numNotifications: this.timeline.length()});
