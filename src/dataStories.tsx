@@ -19,6 +19,8 @@ const kInitialTallDimensions = {
 class StoryArea extends Component<{}, { numNotifications: number, stateID: number, storyMode: string }> {
     private timeline: Timeline = new Timeline(this);
     private restoreInProgress = false;
+    private waitingForDocumentState = false;
+    private makingMarker = false;
 
     constructor(props: any) {
         super(props);
@@ -27,19 +29,25 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         this.handleNotification = this.handleNotification.bind(this);
         this.clear = this.clear.bind(this);
         this.changeStoryMode = this.changeStoryMode.bind(this);
-        this.onMakeMarker = this.onMakeMarker.bind(this);
+        this.startMakingMarker = this.startMakingMarker.bind(this);
 
         codapInterface.on('notify', '*', '', this.handleNotification);
-        // Get the initial state
-        codapInterface.sendRequest({
-            action: 'get',
-            resource: 'document'
-        }).then(() => {
-            this.clear();
-            console.log("Initial clear() completed.");
-        });
 
-        console.log("Initial mode is " + this.state.storyMode);
+        this.requestDocumentState();    // Get the initial state
+        this.clear();
+        console.log("Initial clear() completed. Initial mode is " + this.state.storyMode);
+    }
+
+    private requestDocumentState(): void {
+        codapInterface.sendRequest({action: 'get', resource: 'document'});
+        this.waitingForDocumentState = true;
+    }
+
+    private receiveNewDocumentState(iCommand: any): void {
+        this.waitingForDocumentState = false;
+        if (this.makingMarker) {
+            this.finishMakingMarker(iCommand.values.state);
+        }
     }
 
     /**
@@ -80,8 +88,15 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
      * @param iCommand    the Command resulting from the user action
      */
     private handleNotification(iCommand: any): void {
-        this.timeline.handleNotification(iCommand);
-
+        if (iCommand.resource !== 'undoChangeNotice') {     //  ignore all of these
+            if (iCommand.values.operation === 'newDocumentState') {
+                if (this.waitingForDocumentState) {
+                    this.receiveNewDocumentState(iCommand);
+                }
+            } else {
+                this.timeline.handleNotification(iCommand);
+            }
+        }
     }
 
 
@@ -117,27 +132,16 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         }
     }
 
-    public async onMakeMarker() {
-        const theState =  this.getCodapState();  //  todo: not yet hooked up :)
-        this.timeline.makeMarkerOnDemand();
+    public startMakingMarker():void {
+        this.requestDocumentState();
+        this.makingMarker = true;
+    }
+
+    public  finishMakingMarker(iCodapState: any):void {
+        this.makingMarker = false;
+        this.timeline.makeMarkerOnDemand(iCodapState);
         this.forceRender();
     }
-
-    private  getCodapState()  {
-        let this_ = this;
-        let theState:any;
-        const theMessage = {
-            action: 'get',
-            resource: 'interactiveFrame'
-        };
-        codapInterface.sendRequest(theMessage).then(
-            (result) => {
-                theState = result;
-            }
-        );
-    }
-
-
 
     public forceRender() {
         this.setState({numNotifications: this.timeline.length()});
@@ -162,7 +166,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                     {this.state.storyMode === "scrubber" ? "focus" : "back to timeline"}
                 </div>
                 <div className="story-child clear-button"
-                     onClick={this.onMakeMarker}
+                     onClick={this.startMakingMarker}
                      title={"mark the current state"}
                 >
                     {"mark!"}
@@ -212,7 +216,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
             (
                 <div className="focus-area">
                     <p>
-{/*
+                        {/*
                         <label for={"focusMomentTitleText"}>Moment {theFocusMoment.ID}</label>
 */}
                         <input
@@ -220,10 +224,10 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                             type={"text"}
                             value={theFocusMoment.title}
                             onChange={(e) => {
-                            const theText: string = e.target.value;
-                            theFocusMoment.setTitle(theText);
-                            this.forceRender();
-                        }}
+                                const theText: string = e.target.value;
+                                theFocusMoment.setTitle(theText);
+                                this.forceRender();
+                            }}
                         />
                         ({theFocusMoment.created.toLocaleTimeString()})
                     </p>

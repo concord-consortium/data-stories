@@ -61,7 +61,7 @@ export class Timeline {
     setInitialMoment() {
         this.moments = [];
         this.currentIndex = -1;
-        let tMoment = this.makeMarkerOnDemand();
+        let tMoment = this.makeMarkerOnDemand(this.currentCodapState);  //  null at this point
         tMoment.title = "start";
         this.setStartingIndex(tMoment.ID);
         tMoment.setMarker(true);
@@ -103,10 +103,8 @@ export class Timeline {
         return this.moments;
     }
 
-
-
-    makeMarkerOnDemand(): Moment {
-        let tNewMoment : Moment = new Moment(this.currentCodapState);
+    makeMarkerOnDemand(iCodapState: any): Moment {
+        let tNewMoment : Moment = new Moment(iCodapState);
         tNewMoment.ID = this.moments.length;
         tNewMoment.title = "M " + tNewMoment.ID;
 
