@@ -13,16 +13,8 @@ export class Timeline {
     public currentCodapState: object | null = null;
 
     constructor(iParent: any) {
-        //  todo: get actual codap state here
-        this.initializeToCodapState(null);
+        //  this.initializeToCodapState(null);
         this.parent = iParent;
-    }
-
-    initializeToCodapState(iState: object | null) {
-        this.initialCodapState = iState;
-        this.currentCodapState = iState;
-
-        this.setInitialMoment();
     }
 
     getCurrentIndex() {
@@ -42,29 +34,16 @@ export class Timeline {
     }
 
     /**
-     * Called from above. User has clicked ona particular moment, so we are about to time travel there.
+     * Called from above. User has clicked on a particular moment, so we are about to time travel there.
      * Adjust this timeline (model) so that everything is set correctly.
      * @param iID
      */
-    onMomentClick(iID : number): Moment {
+    onMomentClick(iID: number): Moment {
         const tMoment = this.moments[iID];
         this.setCurrentIndex(iID);
         this.currentCodapState = tMoment.codapState;
 
         return tMoment;
-    }
-
-    /**
-     * Blank the array of moments,
-     * and create a new initial Moment, called "start"
-     */
-    setInitialMoment() {
-        this.moments = [];
-        this.currentIndex = -1;
-        let tMoment = this.makeMarkerOnDemand(this.currentCodapState);  //  null at this point
-        tMoment.title = "start";
-        this.setStartingIndex(tMoment.ID);
-        tMoment.setMarker(true);
     }
 
 
@@ -91,6 +70,7 @@ export class Timeline {
      * of StoryMoments on the current timeline.
      */
     momentsOnThisTimeline() {
+/*
         let out = [];
         let xSE = this.startingIndex;
         while (xSE >= 0) {
@@ -98,18 +78,29 @@ export class Timeline {
             out.push(nextMoment);
             xSE = nextMoment.next;
         }
+*/
         //  return out;
 
         return this.moments;
     }
 
     makeMarkerOnDemand(iCodapState: any): Moment {
-        let tNewMoment : Moment = new Moment(iCodapState);
-        tNewMoment.ID = this.moments.length;
-        tNewMoment.title = "M " + tNewMoment.ID;
+        let theTitle: string = "";
+        if (!this.initialCodapState) {
+            this.moments = [];      //  blank the moment array
+            this.initialCodapState = iCodapState;
+        }
+
+        let tNewMoment: Moment = new Moment(iCodapState);
+        this.currentCodapState = iCodapState;
+        tNewMoment.ID = this.moments.length;    //  will be zero if this is new.
 
         this.moments.push(tNewMoment);
         this.setCurrentIndex(tNewMoment.ID);
+        this.setStartingIndex(tNewMoment.ID);
+        tNewMoment.setMarker(true);
+
+        tNewMoment.title = (tNewMoment.ID === 0) ? "start" : "M " + tNewMoment.ID;
         return tNewMoment;
     }
 
@@ -167,9 +158,9 @@ export class Timeline {
         return handlerResult;
     }
 
-    stateInfoString(iState:any) {
+    stateInfoString(iState: any) {
         const theComponents: any = iState["components"];
-        const compArray = theComponents.map( (el:any) => el.type);
+        const compArray = theComponents.map((el: any) => el.type);
         return compArray.join(" ");
     }
 }

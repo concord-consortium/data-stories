@@ -27,14 +27,13 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         this.state = {numNotifications: 0, stateID: -1, storyMode: 'scrubber'};
 
         this.handleNotification = this.handleNotification.bind(this);
-        this.clear = this.clear.bind(this);
         this.changeStoryMode = this.changeStoryMode.bind(this);
         this.startMakingMarker = this.startMakingMarker.bind(this);
 
         codapInterface.on('notify', '*', '', this.handleNotification);
 
-        this.requestDocumentState();    // Get the initial state
-        this.clear();
+        this.startMakingMarker();    // Make the initial marker, which sets the initial state
+
         console.log("Initial clear() completed. Initial mode is " + this.state.storyMode);
     }
 
@@ -48,6 +47,17 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         if (this.makingMarker) {
             this.finishMakingMarker(iCommand.values.state);
         }
+    }
+
+    public startMakingMarker():void {
+        this.requestDocumentState();
+        this.makingMarker = true;
+    }
+
+    public  finishMakingMarker(iCodapState: any):void {
+        this.timeline.makeMarkerOnDemand(iCodapState);
+        this.makingMarker = false;
+        this.forceRender();
     }
 
     /**
@@ -69,16 +79,6 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         codapInterface.sendRequest(theMessage);     //  change the shape of the plugin
         this.setState({storyMode: newMode});
     }
-
-    /**
-     * Reset the notifications array and force a redraw.
-     */
-    private clear(): void {
-        this.timeline.initializeToCodapState(this.timeline.currentCodapState);
-        console.log("In clear()");
-        this.setState({stateID: this.state.stateID});
-    };
-
 
     /**
      * Responsible for handling the various notifications we receive
@@ -130,17 +130,6 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
             const theResult = await this.restoreCodapState(tMoment.codapState);
             this.forceRender();
         }
-    }
-
-    public startMakingMarker():void {
-        this.requestDocumentState();
-        this.makingMarker = true;
-    }
-
-    public  finishMakingMarker(iCodapState: any):void {
-        this.makingMarker = false;
-        this.timeline.makeMarkerOnDemand(iCodapState);
-        this.forceRender();
     }
 
     public forceRender() {
