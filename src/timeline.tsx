@@ -27,7 +27,6 @@ export class Timeline {
         console.log("Current index now " + i);
     }
 
-
     setStartingIndex(i: number) {
         if (i < 0) i = 0;
         this.startingIndex = i;
@@ -84,6 +83,12 @@ export class Timeline {
         return this.moments;
     }
 
+    /**
+     * Create a marker, given a current CODAP state.
+     * return a Moment based on that state.
+     *
+     * @param iCodapState
+     */
     makeMarkerOnDemand(iCodapState: any): Moment {
         let theTitle: string = "";
         if (!this.initialCodapState) {
@@ -101,63 +106,32 @@ export class Timeline {
         tNewMoment.setMarker(true);
 
         tNewMoment.title = (tNewMoment.ID === 0) ? "start" : "M " + tNewMoment.ID;
+        tNewMoment.narrative = "Narrative for marker [" + tNewMoment.title + "]";
         return tNewMoment;
     }
 
-    handleNotification(iCommand: any): any {
-
-        /**
-         * This is a kludge.  todo: eliminate the kludge
-         */
-        let handlerResult: any = {
-            waiting: false,
-            doSetState: false,
-        };
-
-        /*
-        This method maintains this.currentCodapState.
-        We get sent the new state with a newDocumentState notification.
-
-            The idea is this: When the user does something undoable (e.g., create slider)
-            the first notification is for that creation; at that point we store that
-            notification in `this.notificationInWaiting`.
-            LATER, CODAP has figured out the new state of the document, and issues a newDocumentState notification,
-            at which point we (a) create a new Moment and insert into the this.moments list, and
-            (b) compute the difference from the previous document state and insert it (storeCodapState())
-            in the Moment that we just created in its codapStateDiff field.
-           */
-
-        if (iCommand.resource !== 'undoChangeNotice') {
-            if (iCommand.values.operation === 'newDocumentState') { //  this happens second
-                const tNewCodapState = iCommand.values.state;
-                if (!this.initialCodapState) {
-                    this.initialCodapState = tNewCodapState;
-                } else if (this.parent.restoreInProgress) return;
-
-                else if (this.notificationInWaiting) {
-                    //  this.makeAndStoreNewMoment(tNewCodapState);
-                    this.notificationInWaiting = null;
-                    //  console.log("    new moment yields state: " + this.stateInfoString(tNewCodapState));
-                } else {
-                    console.log("    travel to state: " + this.stateInfoString(tNewCodapState));
-
-                    //  this happens on the newDocumentState notification that comes
-                    //  after the user presses a Moment control to time-travel
-                }
-                this.currentCodapState = tNewCodapState;
-                handlerResult.doSetState = true;
-            } else {            //  this happens first
-                if (this.notificationInWaiting) {
-                    alert("unexpected notification!");
-                } else {
-                    //  this.notificationInWaiting = iCommand;  //  save this for later
-                }
-            }
-        }
-
-        return handlerResult;
+    /**
+     * Set the narrative for the current index to the given text
+     * which was captured by the plugin from the text object, in response
+     * to an edit event.
+     *
+     * todo: originally we got the current moment from the getter method. Did not work because of typing (could be undefined)
+     * @param iString
+     */
+    setNewNarrative(iString : string) : void {
+        let theMoment:Moment  = this.moments[this.currentIndex];    //  this.currentMoment();
+        theMoment.narrative = iString;
     }
 
+
+    handleNotification(iCommand: any): void {
+
+    }
+
+    /**
+     * Used for debugging. Shows the types of components in the given State
+     * @param iState
+     */
     stateInfoString(iState: any) {
         const theComponents: any = iState["components"];
         const compArray = theComponents.map((el: any) => el.type);

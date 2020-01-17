@@ -6,6 +6,8 @@ import {MomentView, Moment} from './moment';
 import './dataStories.css';
 
 const kPluginName = "DataStories";
+const kNarrativeTextBoxName = "narrative";
+
 const kVersion = "0.1";
 const kInitialWideDimensions = {
     width: 800,
@@ -32,30 +34,66 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 
         codapInterface.on('notify', '*', '', this.handleNotification);
 
+        this.makeInitialNarrativeTextBox();
         this.startMakingMarker();    // Make the initial marker, which sets the initial state
-
         console.log("Initial clear() completed. Initial mode is " + this.state.storyMode);
     }
 
+    private async makeInitialNarrativeTextBox(): Promise<any> {
+        const textBoxObject = {
+            type: "text",
+            name: kNarrativeTextBoxName,
+            text: "This is the narrative for the beginning of your data story"
+        };
+        const theMessage = {
+            action: "create",
+            resource: "component",
+            values: textBoxObject
+        };
+
+        await codapInterface.sendRequest(theMessage);
+    }
+
+    /**
+     * We ask for the document state using a get-document request.
+     * But the result cannot come back, even with _await_.
+     * So we set a flag which gets unset in a partner method, `receiveNewDocumentState`.
+     */
     private requestDocumentState(): void {
         codapInterface.sendRequest({action: 'get', resource: 'document'});
         this.waitingForDocumentState = true;
     }
 
+    /**
+     * We are notified of a `newDocumentState` event.
+     * The current CodapState is in the iCommand.
+     * @param iCommand
+     */
     private receiveNewDocumentState(iCommand: any): void {
-        this.waitingForDocumentState = false;
-        if (this.makingMarker) {
-            this.finishMakingMarker(iCommand.values.state);
+        if (this.waitingForDocumentState) {
+            this.waitingForDocumentState = false;
+            if (this.makingMarker) {
+                this.finishMakingMarker(iCommand.values.state);
+            }
         }
     }
 
-    public startMakingMarker():void {
+    /**
+     * In order to make a marker, we must get the current CODAP state.
+     */
+    public startMakingMarker(): void {
         this.requestDocumentState();
         this.makingMarker = true;
     }
 
-    public  finishMakingMarker(iCodapState: any):void {
-        this.timeline.makeMarkerOnDemand(iCodapState);
+    /**
+     * A new codapState has arrived, so we can ask the timeline to make the marker. Finally.
+     * @param iCodapState
+     */
+    public finishMakingMarker(iCodapState: any): void {
+        const tMoment = this.timeline.makeMarkerOnDemand(iCodapState);
+        this.displayNarrativeInTextBox(tMoment);
+
         this.makingMarker = false;
         this.forceRender();
     }
@@ -87,14 +125,29 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
      *
      * @param iCommand    the Command resulting from the user action
      */
-    private handleNotification(iCommand: any): void {
+    private async handleNotification(iCommand: any): Promise<any> {
         if (iCommand.resource !== 'undoChangeNotice') {     //  ignore all of these
             if (iCommand.values.operation === 'newDocumentState') {
                 if (this.waitingForDocumentState) {
                     this.receiveNewDocumentState(iCommand);
                 }
             } else {
-                this.timeline.handleNotification(iCommand);
+                if (iCommand.values.operation === 'edit') {
+                    if (iCommand.values.type === "DG.TextView" &&
+                        iCommand.values.title === kNarrativeTextBoxName) {
+
+                        const theMessage = {action: "get", resource: "component[" + kNarrativeTextBoxName + "]"};
+                        const theResult:any = await codapInterface.sendRequest(theMessage);
+                        if (theResult.success) {
+                            const theNewNarrative = theResult.values.text;
+                            console.log("Text get result is " + theNewNarrative);
+                            this.timeline.setNewNarrative(theNewNarrative);
+                        }
+
+                    }
+                }
+
+                //  this.timeline.handleNotification(iCommand);
             }
         }
     }
@@ -122,18 +175,47 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         return out;
     }
 
+    /**
+     * Handles a user click on a moment in the timeline.
+     *
+     * @param e     the mouse event
+     * @param iID   the ID of the moment (set in the original onClick)
+     */
     public async onMomentClick(e: MouseEvent, iID: number) {
         //  this.focusMomentIndex = iID;
-        let tMoment = this.timeline.onMomentClick(iID);
+        let tMoment: Moment = this.timeline.onMomentClick(iID); //  sets current index, current state
+
+        //  if there is an actual moment, do the time-travel using `restoreCodapState`.
         if (tMoment) {
             console.log('Click; go to moment [' + tMoment.title + ']');
             const theResult = await this.restoreCodapState(tMoment.codapState);
             this.forceRender();
+            this.displayNarrativeInTextBox(tMoment);
         }
     }
 
     public forceRender() {
         this.setState({numNotifications: this.timeline.length()});
+    }
+
+    /**
+     * Given a Moment, display its narrative in the narrative text box
+     * @param iMoment
+     */
+    private displayNarrativeInTextBox(iMoment: Moment): void {
+        const textBoxObject = {
+            type: "text",
+            name: kNarrativeTextBoxName,
+            text: iMoment.narrative
+        };
+
+        const theMessage = {
+            action: "update",
+            resource: "component[" + kNarrativeTextBoxName + "]",
+            values: textBoxObject
+        };
+
+        codapInterface.sendRequest(theMessage);
     }
 
     public render() {
@@ -143,10 +225,8 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         Begin with a div that can contain various controls;
         it's not part of the list of moments or the editing controls for a particular moment.
         */
-        const controlArea = (
+        const scrubberControlArea = (
             <div className="control-area">
-                <div className="message">use option-click to toggle marker status</div>
-
                 {/*  start with the Focus button */}
                 <div className="story-child clear-button"
                      onClick={this.changeStoryMode}
@@ -154,12 +234,26 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                 >
                     {this.state.storyMode === "scrubber" ? "focus" : "back to timeline"}
                 </div>
+
                 <div className="story-child clear-button"
                      onClick={this.startMakingMarker}
                      title={"mark the current state"}
                 >
                     {"mark!"}
                 </div>
+            </div>
+        );
+
+        const focusControlArea = (
+            <div className="control-area">
+                {/*  start with the Focus button */}
+                <div className="story-child clear-button"
+                     onClick={this.changeStoryMode}
+                     title={"press to focus on the current moment"}
+                >
+                    {this.state.storyMode === "scrubber" ? "focus" : "back to timeline"}
+                </div>
+
             </div>
         );
 
@@ -251,7 +345,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 
         const theContent = (this.state.storyMode === "scrubber") ? momentsArea : focusArea;
         const theStoryPanelStyle = (this.state.storyMode === "scrubber") ? "story-panel-wide" : "story-panel-tall";
-
+        const controlArea = (this.state.storyMode === "scrubber") ? scrubberControlArea : focusControlArea;
         return (
             <div className={theStoryPanelStyle}>
                 {controlArea}
