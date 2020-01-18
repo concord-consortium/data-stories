@@ -1,10 +1,10 @@
-import jiff from "jiff";
+//  import jiff from "jiff";
 import {Moment} from "./moment";
 
 
 export class Timeline {
     private moments: Moment[] = [];
-    private notificationInWaiting: object | null = null;
+//    private notificationInWaiting: object | null = null;
     private currentIndex: number = -1;
     private startingIndex: number = -1;
     private parent: any;
@@ -45,6 +45,13 @@ export class Timeline {
         return tMoment;
     }
 
+    deleteCurrentMarker() : void {
+        const theIndex = this.currentIndex;
+        this.moments.splice(theIndex, 1);
+        if (this.currentIndex >= this.moments.length) {
+            this.setCurrentIndex(this.moments.length - 1);
+        }
+    }
 
     length() {
         return this.moments.length;
@@ -90,7 +97,6 @@ export class Timeline {
      * @param iCodapState
      */
     makeMarkerOnDemand(iCodapState: any): Moment {
-        let theTitle: string = "";
         if (!this.initialCodapState) {
             this.moments = [];      //  blank the moment array
             this.initialCodapState = iCodapState;
@@ -105,7 +111,7 @@ export class Timeline {
         this.setStartingIndex(tNewMoment.ID);
         tNewMoment.setMarker(true);
 
-        tNewMoment.title = (tNewMoment.ID === 0) ? "start" : "M " + tNewMoment.ID;
+        tNewMoment.title = (tNewMoment.ID === 0) ? "start" : "M-" + tNewMoment.ID;
         tNewMoment.narrative = "Narrative for marker [" + tNewMoment.title + "]";
         return tNewMoment;
     }
@@ -115,12 +121,11 @@ export class Timeline {
      * which was captured by the plugin from the text object, in response
      * to an edit event.
      *
-     * todo: originally we got the current moment from the getter method. Did not work because of typing (could be undefined)
      * @param iString
      */
     setNewNarrative(iString : string) : void {
-        let theMoment:Moment  = this.moments[this.currentIndex];    //  this.currentMoment();
-        theMoment.narrative = iString;
+        let theMoment  = this.currentMoment();
+        if (theMoment) theMoment.narrative = iString;
     }
 
 

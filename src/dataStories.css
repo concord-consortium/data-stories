@@ -93,3 +93,8 @@
 .clear-button {
     background-color: gold;
 }
+
+.icon-button {
+    font-size: 20px;
+    text-align: center;
+}

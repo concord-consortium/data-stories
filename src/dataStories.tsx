@@ -7,6 +7,9 @@ import './dataStories.css';
 
 const kPluginName = "DataStories";
 const kNarrativeTextBoxName = "narrative";
+const kMagnifyingGlass = "\ud83d\udd0d";
+const kCheckmark = "\u2714";
+const kTrashCan = "\uD83D\uddd1";
 
 const kVersion = "0.1";
 const kInitialWideDimensions = {
@@ -30,16 +33,17 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 
         this.handleNotification = this.handleNotification.bind(this);
         this.changeStoryMode = this.changeStoryMode.bind(this);
+        this.deleteCurrentMarker = this.deleteCurrentMarker.bind(this);
         this.startMakingMarker = this.startMakingMarker.bind(this);
 
         codapInterface.on('notify', '*', '', this.handleNotification);
 
-        this.makeInitialNarrativeTextBox();
+        StoryArea.makeInitialNarrativeTextBox();
         this.startMakingMarker();    // Make the initial marker, which sets the initial state
         console.log("Initial clear() completed. Initial mode is " + this.state.storyMode);
     }
 
-    private async makeInitialNarrativeTextBox(): Promise<any> {
+    private static async makeInitialNarrativeTextBox(): Promise<any> {
         const textBoxObject = {
             type: "text",
             name: kNarrativeTextBoxName,
@@ -92,9 +96,14 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
      */
     public finishMakingMarker(iCodapState: any): void {
         const tMoment = this.timeline.makeMarkerOnDemand(iCodapState);
-        this.displayNarrativeInTextBox(tMoment);
+        StoryArea.displayNarrativeInTextBox(tMoment);
 
         this.makingMarker = false;
+        this.forceRender();
+    }
+
+    private deleteCurrentMarker(): void {
+        this.timeline.deleteCurrentMarker();
         this.forceRender();
     }
 
@@ -188,9 +197,9 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         //  if there is an actual moment, do the time-travel using `restoreCodapState`.
         if (tMoment) {
             console.log('Click; go to moment [' + tMoment.title + ']');
-            const theResult = await this.restoreCodapState(tMoment.codapState);
+            await this.restoreCodapState(tMoment.codapState);
             this.forceRender();
-            this.displayNarrativeInTextBox(tMoment);
+            StoryArea.displayNarrativeInTextBox(tMoment);
         }
     }
 
@@ -202,7 +211,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
      * Given a Moment, display its narrative in the narrative text box
      * @param iMoment
      */
-    private displayNarrativeInTextBox(iMoment: Moment): void {
+    private static displayNarrativeInTextBox(iMoment: Moment): void {
         const textBoxObject = {
             type: "text",
             name: kNarrativeTextBoxName,
@@ -225,21 +234,31 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         Begin with a div that can contain various controls;
         it's not part of the list of moments or the editing controls for a particular moment.
         */
+
+        const focusButtonGuts = (this.state.storyMode === "scrubber") ? kMagnifyingGlass : "back to timeline";
         const scrubberControlArea = (
             <div className="control-area">
-                {/*  start with the Focus button */}
-                <div className="story-child clear-button"
+                {/*   delete button */}
+                <div className="story-child clear-button icon-button"
+                     onClick={this.deleteCurrentMarker}
+                     title={"press to delete the current moment"}
+                >
+                    {kTrashCan}
+                </div>
+
+                {/*   Focus button */}
+                <div className="story-child clear-button icon-button"
                      onClick={this.changeStoryMode}
                      title={"press to focus on the current moment"}
                 >
-                    {this.state.storyMode === "scrubber" ? "focus" : "back to timeline"}
+                    {focusButtonGuts}
                 </div>
 
-                <div className="story-child clear-button"
+                <div className="story-child clear-button icon-button"
                      onClick={this.startMakingMarker}
                      title={"mark the current state"}
                 >
-                    {"mark!"}
+                    {kCheckmark}
                 </div>
             </div>
         );
@@ -251,7 +270,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                      onClick={this.changeStoryMode}
                      title={"press to focus on the current moment"}
                 >
-                    {this.state.storyMode === "scrubber" ? "focus" : "back to timeline"}
+                    {focusButtonGuts}
                 </div>
 
             </div>
