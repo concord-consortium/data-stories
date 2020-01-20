@@ -21,359 +21,387 @@ const kInitialTallDimensions = {
     height: 555
 };
 
+function makeInitialNarrativeTextBox(): void {
+    needNarrativeTextBox().then(
+        (need) => {
+            if (need) {
+                const textBoxObject = {
+                    type: "text",
+                    name: kNarrativeTextBoxName,
+                    cannotClose: true,
+                    text: "This is the narrative for the beginning of your data story."
+                };
+                const theMessage = {
+                    action: "create",
+                    resource: "component",
+                    values: textBoxObject
+                };
+
+                codapInterface.sendRequest(theMessage);
+
+            }
+        }
+    );
+}
+
+async function needNarrativeTextBox(): Promise<boolean> {
+    const theMessage = {action: "get", resource: "componentList"};
+    const theResult: any = await codapInterface.sendRequest(theMessage);
+    let need: boolean = true;
+
+    if (theResult.success) {
+        theResult.values.forEach((c: any) => {
+            if (c.name === kNarrativeTextBoxName) {
+                if (c.type === 'text') {
+                    need = false;
+                }
+            }
+        })
+    }
+
+    return need;
+}
+
+window.onload =  makeInitialNarrativeTextBox;
+
 class StoryArea extends Component<{}, { numNotifications: number, stateID: number, storyMode: string }> {
-    private timeline: Timeline = new Timeline(this);
-    private restoreInProgress = false;
-    private waitingForDocumentState = false;
-    private makingMarker = false;
+        private timeline: Timeline = new Timeline(this);
+        private restoreInProgress = false;
+        private waitingForDocumentState = false;
+        private makingMarker = false;
 
-    constructor(props: any) {
-        super(props);
-        this.state = {numNotifications: 0, stateID: -1, storyMode: 'scrubber'};
+        constructor(props: any) {
+            super(props);
+            this.state = {numNotifications: 0, stateID: -1, storyMode: 'scrubber'};
 
-        this.handleNotification = this.handleNotification.bind(this);
-        this.changeStoryMode = this.changeStoryMode.bind(this);
-        this.deleteCurrentMarker = this.deleteCurrentMarker.bind(this);
-        this.startMakingMarker = this.startMakingMarker.bind(this);
+            this.handleNotification = this.handleNotification.bind(this);
+            this.changeStoryMode = this.changeStoryMode.bind(this);
+            this.deleteCurrentMarker = this.deleteCurrentMarker.bind(this);
+            this.startMakingMarker = this.startMakingMarker.bind(this);
 
-        codapInterface.on('notify', '*', '', this.handleNotification);
+            codapInterface.on('notify', '*', '', this.handleNotification);
 
-        StoryArea.makeInitialNarrativeTextBox();
-        this.startMakingMarker();    // Make the initial marker, which sets the initial state
-        console.log("Initial clear() completed. Initial mode is " + this.state.storyMode);
-    }
-
-    private static async makeInitialNarrativeTextBox(): Promise<any> {
-        const textBoxObject = {
-            type: "text",
-            name: kNarrativeTextBoxName,
-            text: "This is the narrative for the beginning of your data story"
-        };
-        const theMessage = {
-            action: "create",
-            resource: "component",
-            values: textBoxObject
-        };
-
-        await codapInterface.sendRequest(theMessage);
-    }
-
-    /**
-     * We ask for the document state using a get-document request.
-     * But the result cannot come back, even with _await_.
-     * So we set a flag which gets unset in a partner method, `receiveNewDocumentState`.
-     */
-    private requestDocumentState(): void {
-        codapInterface.sendRequest({action: 'get', resource: 'document'});
-        this.waitingForDocumentState = true;
-    }
-
-    /**
-     * We are notified of a `newDocumentState` event.
-     * The current CodapState is in the iCommand.
-     * @param iCommand
-     */
-    private receiveNewDocumentState(iCommand: any): void {
-        if (this.waitingForDocumentState) {
-            this.waitingForDocumentState = false;
-            if (this.makingMarker) {
-                this.finishMakingMarker(iCommand.values.state);
-            }
+            this.startMakingMarker();    // Make the initial marker, which sets the initial state
+            console.log("Initial clear() completed. Initial mode is " + this.state.storyMode);
         }
-    }
 
-    /**
-     * In order to make a marker, we must get the current CODAP state.
-     */
-    public startMakingMarker(): void {
-        this.requestDocumentState();
-        this.makingMarker = true;
-    }
-
-    /**
-     * A new codapState has arrived, so we can ask the timeline to make the marker. Finally.
-     * @param iCodapState
-     */
-    public finishMakingMarker(iCodapState: any): void {
-        const tMoment = this.timeline.makeMarkerOnDemand(iCodapState);
-        StoryArea.displayNarrativeInTextBox(tMoment);
-
-        this.makingMarker = false;
-        this.forceRender();
-    }
-
-    private deleteCurrentMarker(): void {
-        this.timeline.deleteCurrentMarker();
-        this.forceRender();
-    }
-
-    /**
-     * Toggle story mode between `scrubber` and `focus`.
-     * Change the shape of the Iframe, then change the (React) state;
-     * then, on render(), actually display different material (e.g., detailed info on a moment when `state.storyMode` is `scrubber`.)
-     */
-    private changeStoryMode(): void {
-
-        const newMode = (this.state.storyMode === 'focus') ? 'scrubber' : 'focus';
-
-        const theMessage = {
-            action: "update",
-            resource: "interactiveFrame",
-            values: {
-                dimensions: (newMode === 'focus') ? kInitialTallDimensions : kInitialWideDimensions
-            }
-        };
-        codapInterface.sendRequest(theMessage);     //  change the shape of the plugin
-        this.setState({storyMode: newMode});
-    }
-
-    /**
-     * Responsible for handling the various notifications we receive
-     * when the user makes an undoable action,
-     * and also when CODAP respomds to our requests to move to a different codapState
-     *
-     * @param iCommand    the Command resulting from the user action
-     */
-    private async handleNotification(iCommand: any): Promise<any> {
-        if (iCommand.resource !== 'undoChangeNotice') {     //  ignore all of these
-            if (iCommand.values.operation === 'newDocumentState') {
-                if (this.waitingForDocumentState) {
-                    this.receiveNewDocumentState(iCommand);
-                }
-            } else {
-                if (iCommand.values.operation === 'edit') {
-                    if (iCommand.values.type === "DG.TextView" &&
-                        iCommand.values.title === kNarrativeTextBoxName) {
-
-                        const theMessage = {action: "get", resource: "component[" + kNarrativeTextBoxName + "]"};
-                        const theResult:any = await codapInterface.sendRequest(theMessage);
-                        if (theResult.success) {
-                            const theNewNarrative = theResult.values.text;
-                            console.log("Text get result is " + theNewNarrative);
-                            this.timeline.setNewNarrative(theNewNarrative);
-                        }
-
-                    }
-                }
-
-                //  this.timeline.handleNotification(iCommand);
-            }
-        }
-    }
-
-
-    /**
-     * Asks CODAP to restore itself to the given state.
-     * Note: sets restoreInProgress while it's running and resolving its promises
-     *
-     * @param iCodapState    the state to restore to; this is the potentially large JSON object
-     */
-    private restoreCodapState(iCodapState: object | null): any {
-        let out: any = null;
-        if (iCodapState) {
-            let this_ = this;
-            this.restoreInProgress = true;
-            out = codapInterface.sendRequest({
-                action: 'update',
-                resource: 'document',
-                values: iCodapState
-            }).then(() => {
-                this_.restoreInProgress = false;
-            });
-        }
-        return out;
-    }
-
-    /**
-     * Handles a user click on a moment in the timeline.
-     *
-     * @param e     the mouse event
-     * @param iID   the ID of the moment (set in the original onClick)
-     */
-    public async onMomentClick(e: MouseEvent, iID: number) {
-        //  this.focusMomentIndex = iID;
-        let tMoment: Moment = this.timeline.onMomentClick(iID); //  sets current index, current state
-
-        //  if there is an actual moment, do the time-travel using `restoreCodapState`.
-        if (tMoment) {
-            console.log('Click; go to moment [' + tMoment.title + ']');
-            await this.restoreCodapState(tMoment.codapState);
-            this.forceRender();
-            StoryArea.displayNarrativeInTextBox(tMoment);
-        }
-    }
-
-    public forceRender() {
-        this.setState({numNotifications: this.timeline.length()});
-    }
-
-    /**
-     * Given a Moment, display its narrative in the narrative text box
-     * @param iMoment
-     */
-    private static displayNarrativeInTextBox(iMoment: Moment): void {
-        const textBoxObject = {
-            type: "text",
-            name: kNarrativeTextBoxName,
-            text: iMoment.narrative
-        };
-
-        const theMessage = {
-            action: "update",
-            resource: "component[" + kNarrativeTextBoxName + "]",
-            values: textBoxObject
-        };
-
-        codapInterface.sendRequest(theMessage);
-    }
-
-    public render() {
-        let this_ = this;
-
-        /*
-        Begin with a div that can contain various controls;
-        it's not part of the list of moments or the editing controls for a particular moment.
-        */
-
-        const focusButtonGuts = (this.state.storyMode === "scrubber") ? kMagnifyingGlass : "back to timeline";
-        const scrubberControlArea = (
-            <div className="control-area">
-                {/*   delete button */}
-                <div className="story-child clear-button icon-button"
-                     onClick={this.deleteCurrentMarker}
-                     title={"press to delete the current moment"}
-                >
-                    {kTrashCan}
-                </div>
-
-                {/*   Focus button */}
-                <div className="story-child clear-button icon-button"
-                     onClick={this.changeStoryMode}
-                     title={"press to focus on the current moment"}
-                >
-                    {focusButtonGuts}
-                </div>
-
-                <div className="story-child clear-button icon-button"
-                     onClick={this.startMakingMarker}
-                     title={"mark the current state"}
-                >
-                    {kCheckmark}
-                </div>
-            </div>
-        );
-
-        const focusControlArea = (
-            <div className="control-area">
-                {/*  start with the Focus button */}
-                <div className="story-child clear-button"
-                     onClick={this.changeStoryMode}
-                     title={"press to focus on the current moment"}
-                >
-                    {focusButtonGuts}
-                </div>
-
-            </div>
-        );
-
-        /*
-        Loop over all [story] moments; make a Moment for each.
-        this.timeline.timeline is now a linked list, so we traverse the list
-        to create theMoments, an Array of Moments on the _relevant_ timeline,
-        that is, all timeline that are in the current timeline, past and future :)
-        */
-
-        const momentsOnThisTimeline = this.timeline.momentsOnThisTimeline();
-
-        /*
-            Then we loop through that new Array to make the Moment widgets
-        */
-        const theMoments = momentsOnThisTimeline.map(
-            (aMoment) => {
-                return (
-                    <MomentView
-                        key={aMoment.ID}
-                        onClick={(e: MouseEvent) => this_.onMomentClick(e, aMoment.ID)}
-                        isCurrent={aMoment.ID === this_.timeline.getCurrentIndex()}
-                        theText={aMoment.title}
-                        isMarker={aMoment.isMarker}
-                    />
-                )
-            }
-        );
-
-        const momentsArea = (
-            <div className="story-area">
-                {theMoments}
-            </div>
-        );
-
-        /*
-        If we are editing (focusing on) a particular moment, we look in detail at that moment,
-        which we call theFocusMoment.
+        /**
+         * We ask for the document state using a get-document request.
+         * But the result cannot come back, even with _await_.
+         * So we set a flag which gets unset in a partner method, `receiveNewDocumentState`.
          */
-        const theFocusMoment: Moment | undefined = this.timeline.currentMoment();       //  focusMoment();
+        private requestDocumentState(): void {
+            codapInterface.sendRequest({action: 'get', resource: 'document'});
+            this.waitingForDocumentState = true;
+        }
 
-        const focusArea = (theFocusMoment !== undefined) ?
-            (
-                <div className="focus-area">
-                    <p>
-                        {/*
-                        <label for={"focusMomentTitleText"}>Moment {theFocusMoment.ID}</label>
-*/}
-                        <input
-                            id="focusMomentTitleText"
-                            type={"text"}
-                            value={theFocusMoment.title}
-                            onChange={(e) => {
-                                const theText: string = e.target.value;
-                                theFocusMoment.setTitle(theText);
-                                this.forceRender();
-                            }}
-                        />
-                        ({theFocusMoment.created.toLocaleTimeString()})
-                    </p>
+        /**
+         * We are notified of a `newDocumentState` event.
+         * The current CodapState is in the iCommand.
+         * @param iCommand
+         */
+        private receiveNewDocumentState(iCommand: any): void {
+            if (this.waitingForDocumentState) {
+                this.waitingForDocumentState = false;
+                if (this.makingMarker) {
+                    this.finishMakingMarker(iCommand.values.state);
+                }
+            }
+        }
 
-                    narrative:<br/>
-                    <textarea
-                        rows={5}
-                        value={theFocusMoment.narrative}
-                        onChange={(e) => {
-                            const theText: string = e.target.value;
-                            theFocusMoment.setNarrative(theText);
-                            this.forceRender();
-                        }}
-                    />
-                    <label htmlFor="checkboxSetMarker">Marker?</label>
-                    <input
-                        type="checkbox"
-                        id="checkboxSetMarker"
-                        checked={theFocusMoment.isMarker}
-                        onChange={() => {
-                            theFocusMoment.setMarker(!theFocusMoment.isMarker);
-                            this.forceRender();
-                        }}
-                    />
+        /**
+         * In order to make a marker, we must get the current CODAP state.
+         */
+        public startMakingMarker(): void {
+            this.requestDocumentState();
+            this.makingMarker = true;
+        }
 
-                </div>
-            ) : (
-                <div className="focus-area">
-                    <p>There is no moment to report on; the focus moment was not found in the list!</p>
+        /**
+         * A new codapState has arrived, so we can ask the timeline to make the marker. Finally.
+         * @param iCodapState
+         */
+        public finishMakingMarker(iCodapState: any): void {
+            const tMoment = this.timeline.makeMarkerOnDemand(iCodapState);
+            StoryArea.displayNarrativeInTextBox(tMoment);
+
+            this.makingMarker = false;
+            this.forceRender();
+        }
+
+        private deleteCurrentMarker(): void {
+            this.timeline.deleteCurrentMarker();
+            this.forceRender();
+        }
+
+        /**
+         * Toggle story mode between `scrubber` and `focus`.
+         * Change the shape of the Iframe, then change the (React) state;
+         * then, on render(), actually display different material (e.g., detailed info on a moment when `state.storyMode` is `scrubber`.)
+         */
+        private changeStoryMode(): void {
+
+            const newMode = (this.state.storyMode === 'focus') ? 'scrubber' : 'focus';
+
+            const theMessage = {
+                action: "update",
+                resource: "interactiveFrame",
+                values: {
+                    dimensions: (newMode === 'focus') ? kInitialTallDimensions : kInitialWideDimensions
+                }
+            };
+            codapInterface.sendRequest(theMessage);     //  change the shape of the plugin
+            this.setState({storyMode: newMode});
+        }
+
+        /**
+         * Responsible for handling the various notifications we receive
+         * when the user makes an undoable action,
+         * and also when CODAP respomds to our requests to move to a different codapState
+         *
+         * @param iCommand    the Command resulting from the user action
+         */
+        private async handleNotification(iCommand: any): Promise<any> {
+            if (iCommand.resource !== 'undoChangeNotice') {     //  ignore all of these
+                if (iCommand.values.operation === 'newDocumentState') {
+                    if (this.waitingForDocumentState) {
+                        this.receiveNewDocumentState(iCommand);
+                    }
+                } else {
+                    if (iCommand.values.operation === 'edit') {
+                        if (iCommand.values.type === "DG.TextView" &&
+                            iCommand.values.title === kNarrativeTextBoxName) {
+
+                            const theMessage = {action: "get", resource: "component[" + kNarrativeTextBoxName + "]"};
+                            const theResult: any = await codapInterface.sendRequest(theMessage);
+                            if (theResult.success) {
+                                const theNewNarrative = theResult.values.text;
+                                console.log("Text get result is " + theNewNarrative);
+                                this.timeline.setNewNarrative(theNewNarrative);
+                            }
+
+                        }
+                    }
+
+                    //  this.timeline.handleNotification(iCommand);
+                }
+            }
+        }
+
+
+        /**
+         * Asks CODAP to restore itself to the given state.
+         * Note: sets restoreInProgress while it's running and resolving its promises
+         *
+         * @param iCodapState    the state to restore to; this is the potentially large JSON object
+         */
+        private restoreCodapState(iCodapState: object | null): any {
+            let out: any = null;
+            if (iCodapState) {
+                let this_ = this;
+                this.restoreInProgress = true;
+                out = codapInterface.sendRequest({
+                    action: 'update',
+                    resource: 'document',
+                    values: iCodapState
+                }).then(() => {
+                    this_.restoreInProgress = false;
+                });
+            }
+            return out;
+        }
+
+        /**
+         * Handles a user click on a moment in the timeline.
+         *
+         * @param e     the mouse event
+         * @param iID   the ID of the moment (set in the original onClick)
+         */
+        public async onMomentClick(e: MouseEvent, iID: number) {
+            //  this.focusMomentIndex = iID;
+            let tMoment: Moment | null = this.timeline.onMomentClick(iID); //  sets current index, current state
+
+            //  if there is an actual moment, do the time-travel using `restoreCodapState`.
+            if (tMoment) {
+                console.log('Click; go to moment [' + tMoment.title + ']');
+                await this.restoreCodapState(tMoment.codapState);
+                this.forceRender();
+                StoryArea.displayNarrativeInTextBox(tMoment);
+            }
+        }
+
+        public forceRender() {
+            this.setState({numNotifications: this.timeline.length()});
+        }
+
+        /**
+         * Given a Moment, display its narrative in the narrative text box
+         * @param iMoment
+         */
+        private static displayNarrativeInTextBox(iMoment: Moment): void {
+            const textBoxObject = {
+                type: "text",
+                name: kNarrativeTextBoxName,
+                text: iMoment.narrative
+            };
+
+            const theMessage = {
+                action: "update",
+                resource: "component[" + kNarrativeTextBoxName + "]",
+                values: textBoxObject
+            };
+
+            codapInterface.sendRequest(theMessage);
+        }
+
+        public render() {
+            let this_ = this;
+
+            /*
+            Begin with a div that can contain various controls;
+            it's not part of the list of moments or the editing controls for a particular moment.
+            */
+
+            const focusButtonGuts = (this.state.storyMode === "scrubber") ? kMagnifyingGlass : "back to timeline";
+            const scrubberControlArea = (
+                <div className="control-area">
+                    {/*   delete button */}
+                    <div id="deleteButton"
+                         className="story-child clear-button icon-button"
+                         onClick={this.deleteCurrentMarker}
+                         title={"press to delete the current moment"}
+                    >
+                        {kTrashCan}
+                    </div>
+
+                    {/*   Focus button */}
+                    <div className="story-child clear-button icon-button"
+                         onClick={this.changeStoryMode}
+                         title={"press to focus on the current moment"}
+                    >
+                        {focusButtonGuts}
+                    </div>
+
+                    <div className="story-child clear-button icon-button"
+                         onClick={this.startMakingMarker}
+                         title={"mark the current state"}
+                    >
+                        {kCheckmark}
+                    </div>
                 </div>
             );
 
-        const theContent = (this.state.storyMode === "scrubber") ? momentsArea : focusArea;
-        const theStoryPanelStyle = (this.state.storyMode === "scrubber") ? "story-panel-wide" : "story-panel-tall";
-        const controlArea = (this.state.storyMode === "scrubber") ? scrubberControlArea : focusControlArea;
-        return (
-            <div className={theStoryPanelStyle}>
-                {controlArea}
-                {theContent}
-            </div>
+            const focusControlArea = (
+                <div className="control-area">
+                    {/*  start with the Focus button */}
+                    <div className="story-child clear-button"
+                         onClick={this.changeStoryMode}
+                         title={"press to focus on the current moment"}
+                    >
+                        {focusButtonGuts}
+                    </div>
 
-        );
+                </div>
+            );
+
+            /*
+            Loop over all [story] moments; make a Moment for each.
+            this.timeline.timeline is now a linked list, so we traverse the list
+            to create theMoments, an Array of Moments on the _relevant_ timeline,
+            that is, all timeline that are in the current timeline, past and future :)
+            */
+
+            const momentsOnThisTimeline = this.timeline.momentsOnThisTimeline();
+
+            /*
+                Then we loop through that new Array to make the Moment widgets
+            */
+            const theMoments = momentsOnThisTimeline.map(
+                (aMoment) => {
+                    return (
+                        <MomentView
+                            key={aMoment.ID}
+                            onClick={(e: MouseEvent) => this_.onMomentClick(e, aMoment.ID)}
+                            isCurrent={aMoment.ID === this_.timeline.getCurrentIndex()}
+                            theText={aMoment.title}
+                            isMarker={aMoment.isMarker}
+                        />
+                    )
+                }
+            );
+
+            const momentsArea = (
+                <div className="story-area">
+                    {theMoments}
+                </div>
+            );
+
+            /*
+            If we are editing (focusing on) a particular moment, we look in detail at that moment,
+            which we call theFocusMoment.
+             */
+            const theFocusMoment: Moment | undefined = this.timeline.currentMoment();       //  focusMoment();
+
+            const focusArea = (theFocusMoment !== undefined) ?
+                (
+                    <div className="focus-area">
+                        <p>
+                            {/*
+                        <label for={"focusMomentTitleText"}>Moment {theFocusMoment.ID}</label>
+*/}
+                            <input
+                                id="focusMomentTitleText"
+                                type={"text"}
+                                value={theFocusMoment.title}
+                                onChange={(e) => {
+                                    const theText: string = e.target.value;
+                                    theFocusMoment.setTitle(theText);
+                                    this.forceRender();
+                                }}
+                            />
+                            ({theFocusMoment.created.toLocaleTimeString()})
+                        </p>
+
+                        narrative:<br/>
+                        <textarea
+                            rows={5}
+                            value={theFocusMoment.narrative}
+                            onChange={(e) => {
+                                const theText: string = e.target.value;
+                                theFocusMoment.setNarrative(theText);
+                                this.forceRender();
+                            }}
+                        />
+                        <label htmlFor="checkboxSetMarker">Marker?</label>
+                        <input
+                            type="checkbox"
+                            id="checkboxSetMarker"
+                            checked={theFocusMoment.isMarker}
+                            onChange={() => {
+                                theFocusMoment.setMarker(!theFocusMoment.isMarker);
+                                this.forceRender();
+                            }}
+                        />
+
+                    </div>
+                ) : (
+                    <div className="focus-area">
+                        <p>There is no moment to report on; the focus moment was not found in the list!</p>
+                    </div>
+                );
+
+            const theContent = (this.state.storyMode === "scrubber") ? momentsArea : focusArea;
+            const theStoryPanelStyle = (this.state.storyMode === "scrubber") ? "story-panel-wide" : "story-panel-tall";
+            const controlArea = (this.state.storyMode === "scrubber") ? scrubberControlArea : focusControlArea;
+            return (
+                <div className={theStoryPanelStyle}>
+                    {controlArea}
+                    {theContent}
+                </div>
+
+            );
+        }
     }
-}
 
 
 /**

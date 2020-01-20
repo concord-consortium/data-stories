@@ -95,6 +95,8 @@
 }
 
 .icon-button {
+    background-color: gold;
     font-size: 20px;
     text-align: center;
+    vertical-align: middle;
 }

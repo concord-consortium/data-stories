@@ -7,6 +7,7 @@ export class Timeline {
 //    private notificationInWaiting: object | null = null;
     private currentIndex: number = -1;
     private startingIndex: number = -1;
+    private nextMomentID = 0;
     private parent: any;
 
     public initialCodapState: object | null = null;
@@ -32,20 +33,29 @@ export class Timeline {
         this.startingIndex = i;
     }
 
+    isMoment(m : Moment | undefined): m is Moment {
+        return( m as Moment).codapState !== undefined;
+    }
+
     /**
      * Called from above. User has clicked on a particular moment, so we are about to time travel there.
      * Adjust this timeline (model) so that everything is set correctly.
      * @param iID
      */
-    onMomentClick(iID: number): Moment {
-        const tMoment = this.moments[iID];
-        this.setCurrentIndex(iID);
-        this.currentCodapState = tMoment.codapState;
+    onMomentClick(iID: number): Moment | null {
+        const tMoment = this.momentByID(iID);
 
-        return tMoment;
+        if (this.isMoment(tMoment)) {
+            this.setCurrentIndex(iID);
+            this.currentCodapState = tMoment.codapState;
+
+            return tMoment;
+        }
+        return null;
     }
 
     deleteCurrentMarker() : void {
+        //  todo: check to see if it's OK to delete. Is it OK to delete the last marker? The first marker?
         const theIndex = this.currentIndex;
         this.moments.splice(theIndex, 1);
         if (this.currentIndex >= this.moments.length) {
@@ -104,7 +114,8 @@ export class Timeline {
 
         let tNewMoment: Moment = new Moment(iCodapState);
         this.currentCodapState = iCodapState;
-        tNewMoment.ID = this.moments.length;    //  will be zero if this is new.
+        tNewMoment.ID = this.nextMomentID;    //  will be zero if this is new.
+        this.nextMomentID += 1;
 
         this.moments.push(tNewMoment);
         this.setCurrentIndex(tNewMoment.ID);
