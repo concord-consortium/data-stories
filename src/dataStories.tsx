@@ -5,7 +5,7 @@ import {Timeline} from './timeline';
 import {MomentView, Moment} from './moment';
 import './dataStories.css';
 
-const kPluginName = "DataStories";
+const kPluginName = "Moment Bar";
 const kInitialMarkerStartDelay = 1200;      //  milliseconds
 const kNarrativeTextBoxName = "narrative";
 const kMagnifyingGlass = "\ud83d\udd0d";
@@ -300,7 +300,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
             <div className="control-area">
                 {/*   delete button */}
                 <div id="deleteButton"
-                     className="story-child clear-button icon-button"
+                     className="story-child tool icon-button"
                      onClick={this.deleteCurrentMarker}
                      title={"press to delete the current moment"}
                 >
@@ -308,14 +308,16 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                 </div>
 
                 {/*   Focus button */}
-                <div className="story-child clear-button icon-button"
+{/*
+                <div className="story-child tool icon-button"
                      onClick={this.changeStoryMode}
                      title={"press to focus on the current moment"}
                 >
                     {focusButtonGuts}
                 </div>
+*/}
 
-                <div className="story-child clear-button icon-button"
+                <div className="story-child tool icon-button"
                      onClick={this.startMakingMarker}
                      title={"mark the current state"}
                 >
@@ -327,7 +329,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         const focusControlArea = (
             <div className="control-area">
                 {/*  start with the Focus button */}
-                <div className="story-child clear-button"
+                <div className="story-child tool"
                      onClick={this.changeStoryMode}
                      title={"press to focus on the current moment"}
                 >

@@ -116,7 +116,7 @@ export class Moment {
 }
 
 export function MomentView(props: any) {
-    let theClasses = props.isMarker ? "story-child marker" : "story-child event";
+    let theClasses = "story-child marker";
     if (props.isCurrent) theClasses += " current";
     return (
         <div className={theClasses}

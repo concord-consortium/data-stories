@@ -67,7 +67,6 @@
     /*word-wrap: break-word;*/
     border-radius: 8px;
     height: 32px;
-    width: 32px;
     text-align: left;
     font-size: 9px;
     /*border: 1px solid #000;*/
@@ -78,25 +77,24 @@
     user-select: none;
 }
 
-.event {
-    background-color: #cde;
-}
-
 .marker {
-    background-color: #9ab;
+    width: 40px;
+    background-color: #cde; /* #9ab;    */
 }
 
 .current {
+    background-color: #9ab;
+    height: 28px;
     border: 2px solid;
 }
 
-.clear-button {
+.tool {
+    width: 28px;
     background-color: gold;
+    text-align: center;
+    vertical-align: middle;
 }
 
 .icon-button {
-    background-color: gold;
     font-size: 20px;
-    text-align: center;
-    vertical-align: middle;
 }

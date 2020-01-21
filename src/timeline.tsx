@@ -122,8 +122,8 @@ export class Timeline {
         this.setStartingIndex(tNewMoment.ID);
         tNewMoment.setMarker(true);
 
-        tNewMoment.title = (tNewMoment.ID === 0) ? "start" : "M-" + tNewMoment.ID;
-        tNewMoment.narrative = "Narrative for marker [" + tNewMoment.title + "]";
+        tNewMoment.title = (tNewMoment.ID === 0) ? "start\ncomienzo" : "Moment " + tNewMoment.ID;
+        tNewMoment.narrative = "What did you do? Why did you do it?\n¿Qué hizo? ¿Por qué?";
         return tNewMoment;
     }
 
