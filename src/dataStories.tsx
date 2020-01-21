@@ -6,10 +6,12 @@ import {MomentView, Moment} from './moment';
 import './dataStories.css';
 
 const kPluginName = "DataStories";
+const kInitialMarkerStartDelay = 1200;      //  milliseconds
 const kNarrativeTextBoxName = "narrative";
 const kMagnifyingGlass = "\ud83d\udd0d";
 const kCheckmark = "\u2714";
 const kTrashCan = "\uD83D\uddd1";
+const kSeparatorString = "\n\n";
 
 const kVersion = "0.1";
 const kInitialWideDimensions = {
@@ -21,6 +23,13 @@ const kInitialTallDimensions = {
     height: 555
 };
 
+/**
+ * If necessary, create a text component to hold information about the
+ * current marker's Moment, principally any narrative text the student has written.
+ *
+ * Called as `window.onload` because we want to delay checking until any pre-existing text
+ * box is restored.
+ */
 function makeInitialNarrativeTextBox(): void {
     needNarrativeTextBox().then(
         (need) => {
@@ -38,12 +47,15 @@ function makeInitialNarrativeTextBox(): void {
                 };
 
                 codapInterface.sendRequest(theMessage);
-
             }
         }
     );
 }
 
+/**
+ * Determine is we need a fresh narrative text box.
+ * Returns false if one already exists
+ */
 async function needNarrativeTextBox(): Promise<boolean> {
     const theMessage = {action: "get", resource: "componentList"};
     const theResult: any = await codapInterface.sendRequest(theMessage);
@@ -88,7 +100,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         const this_ = this;
         setTimeout(function () {
             this_.startMakingMarker();    // Make the initial marker, which sets the initial state
-        }, 1200);
+        }, kInitialMarkerStartDelay);
 
         console.log("Initial clear() completed. Initial mode is " + this.state.storyMode);
     }
@@ -183,11 +195,24 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                         const theMessage = {action: "get", resource: "component[" + kNarrativeTextBoxName + "]"};
                         const theResult: any = await codapInterface.sendRequest(theMessage);
                         if (theResult.success) {
-                            const theNewNarrative = theResult.values.text;
-                            console.log("Text get result is " + theNewNarrative);
-                            this.timeline.setNewNarrative(theNewNarrative);
-                        }
+                            const boxText = theResult.values.text;
+                            const separatorIndex = boxText.indexOf(kSeparatorString);
+                            let narrativeIndex = 0;
+                            if (separatorIndex > 0) {
+                                const theFocusMoment: Moment | undefined = this.timeline.currentMoment();
 
+                                if (theFocusMoment !== undefined) {
+                                    narrativeIndex = separatorIndex + kSeparatorString.length;
+                                    const newTitle = boxText.substring(0, separatorIndex);
+                                    theFocusMoment.setTitle(newTitle.trim());
+                                    this.forceRender();     //  put the new title into the timeline
+                                }
+
+                            }
+                            const theNewNarrative = boxText.substring(narrativeIndex);
+                            console.log("Text get result is " + theNewNarrative);
+                            this.timeline.setNewNarrative(theNewNarrative.trim());
+                        }
                     }
                 }
 
@@ -250,7 +275,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         const textBoxObject = {
             type: "text",
             name: kNarrativeTextBoxName,
-            text: iMoment.narrative
+            text: iMoment.title + kSeparatorString + iMoment.narrative
         };
 
         const theMessage = {
@@ -364,6 +389,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                             onChange={(e) => {
                                 const theText: string = e.target.value;
                                 theFocusMoment.setTitle(theText);
+                                StoryArea.displayNarrativeInTextBox(theFocusMoment);
                                 this.forceRender();
                             }}
                         />
@@ -377,9 +403,11 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                         onChange={(e) => {
                             const theText: string = e.target.value;
                             theFocusMoment.setNarrative(theText);
+                            StoryArea.displayNarrativeInTextBox(theFocusMoment);
                             this.forceRender();
                         }}
                     />
+                    <br/>
                     <label htmlFor="checkboxSetMarker">Marker?</label>
                     <input
                         type="checkbox"
