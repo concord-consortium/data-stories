@@ -9,7 +9,7 @@ export class Moment {
     public ID: number = -1;     //  todo: do we need this at all?
     public prev: number = -1;
     public next: number = -1;
-    public codapStateDiff: [number, object][] = [];
+    //  public codapStateDiff: [number, object][] = [];
     public  codapState: object = {};
 
     public isMarker: boolean = false;
@@ -116,10 +116,11 @@ export class Moment {
 }
 
 export function MomentView(props: any) {
-    let theClasses = "story-child marker";
+    let theClasses = " story-child marker";
     if (props.isCurrent) theClasses += " current";
     return (
         <div className={theClasses}
+             draggable
              onClick={props.onClick}
              title={props.theText}
         >

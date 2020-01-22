@@ -5,9 +5,9 @@ import {Moment} from "./moment";
 export class Timeline {
     private moments: Moment[] = [];
 //    private notificationInWaiting: object | null = null;
-    private currentIndex: number = -1;
-    private startingIndex: number = -1;
-    private nextMomentID = 0;
+    private currentID: number = -1;
+    private startingID: number = -1;
+    private nextMomentID = 0;       //   will be the ID of the first moment
     private parent: any;
 
     public initialCodapState: object | null = null;
@@ -18,19 +18,19 @@ export class Timeline {
         this.parent = iParent;
     }
 
-    getCurrentIndex() {
-        return this.currentIndex
+    getCurrentID() {
+        return this.currentID;
     }
 
-    setCurrentIndex(i: number) {
-        if (i < 0) i = 0;
-        this.currentIndex = i;
+    setCurrentID(i: number) {
+        //  if (i < 0) i = this.startingID;
+        this.currentID = i;
         console.log("Current index now " + i);
     }
 
-    setStartingIndex(i: number) {
-        if (i < 0) i = 0;
-        this.startingIndex = i;
+    setStartingID(i: number) {
+        //  if (i < 0) this.currentID = -1;
+        this.startingID = i;
     }
 
     isMoment(m : Moment | undefined): m is Moment {
@@ -46,7 +46,7 @@ export class Timeline {
         const tMoment = this.momentByID(iID);
 
         if (this.isMoment(tMoment)) {
-            this.setCurrentIndex(iID);
+            this.setCurrentID(iID);
             this.currentCodapState = tMoment.codapState;
 
             return tMoment;
@@ -54,13 +54,22 @@ export class Timeline {
         return null;
     }
 
-    deleteCurrentMarker() : void {
-        //  todo: check to see if it's OK to delete. Is it OK to delete the last marker? The first marker?
-        const theIndex = this.currentIndex;
-        this.moments.splice(theIndex, 1);
-        if (this.currentIndex >= this.moments.length) {
-            this.setCurrentIndex(this.moments.length - 1);
+    deleteMomentByID( iID : number) {
+        const theDoomedMoment : Moment = this.momentByID(iID);
+        const predecessor = this.momentByID(theDoomedMoment.prev);
+        if (predecessor) {
+            predecessor.next = theDoomedMoment.next;    //  correct if doomed is last in line
+            this.setCurrentID(predecessor.ID);
+        } else {    //  no predecessor; the doomed one is the first
+            this.setStartingID(theDoomedMoment.next);   //  will be -1 if the list is now empty
+            this.setCurrentID(theDoomedMoment.next);
         }
+    }
+
+    deleteCurrentMoment() : void {
+        const theID = this.currentID;
+        this.deleteMomentByID(theID);
+        //  todo: consider actually removing the moment from the array (for space). Use splice()
     }
 
     length() {
@@ -68,36 +77,64 @@ export class Timeline {
     }
 
     /**
-     * Return the Moment model corresponding to the given ID.
+     * Return the (entire) Moment model corresponding to the given ID.
      * @param iID
      */
-    momentByID(iID: number): Moment | undefined {
+    momentByID(iID: number): Moment {
         return this.moments.find(function (xSE) {
             return xSE.ID === iID
-        });
+        }) as Moment;
     }
 
     currentMoment() {
-        return this.momentByID(this.currentIndex);
+        return this.momentByID(this.currentID);
     }
 
     /**
-     * Starting at the `startingIndex`, traverse the list and assemble an array
-     * of StoryMoments on the current timeline.
+     * Alter the moments list, inserting the given moment after the moment
+     * of the given ID.
+     * Note that this moment is already in the timeline.moments array.
+     * That happened when the moment was created.
+     * we are only adjusting its prev and next fields.
+     *
+     * @param moment    moment to insert
+     * @param previousMomentID  ID after which to insert it.
      */
-    momentsOnThisTimeline() {
-/*
-        let out = [];
-        let xSE = this.startingIndex;
-        while (xSE >= 0) {
-            const nextMoment = this.moments[xSE];
-            out.push(nextMoment);
-            xSE = nextMoment.next;
-        }
-*/
-        //  return out;
+    insertMomentAfterID(moment : Moment, previousMomentID : number) {
+        const previousMoment = this.momentByID(previousMomentID);
+        if (previousMoment) {
+            const subsequentMomentID = previousMoment.next;
+            moment.prev = previousMomentID;
+            moment.next = previousMoment.next;
+            previousMoment.next = moment.ID;
 
-        return this.moments;
+            const afterMoment: Moment = this.momentByID(subsequentMomentID);
+            if (afterMoment) {
+                afterMoment.prev = moment.ID;
+            }
+        } else {   //   there are no moments in the list, e.g., at initialization
+            this.setStartingID(moment.ID);
+            moment.prev = -1;
+            moment.next = -1;
+        }
+    }
+
+    /**
+     * Starting at the `startingID`, traverse the list and assemble an array
+     * of Moments in the current order.
+     */
+
+    momentsOnThisTimeline() {
+        let out = [];
+        let xMomentID = this.startingID;
+        while (xMomentID >= 0) {
+            const nextMoment:Moment | undefined = this.momentByID(xMomentID);
+            if (nextMoment) {
+                out.push(nextMoment);
+                xMomentID = nextMoment.next;
+            }
+        }
+        return out;
     }
 
     /**
@@ -115,11 +152,12 @@ export class Timeline {
         let tNewMoment: Moment = new Moment(iCodapState);
         this.currentCodapState = iCodapState;
         tNewMoment.ID = this.nextMomentID;    //  will be zero if this is new.
-        this.nextMomentID += 1;
+        this.nextMomentID += 1;     // the global number of IDs we have. Not moments.length in case of deletions.
 
         this.moments.push(tNewMoment);
-        this.setCurrentIndex(tNewMoment.ID);
-        this.setStartingIndex(tNewMoment.ID);
+        //  now, in the linked list, insert after the current ID.
+        this.insertMomentAfterID(tNewMoment, this.currentID);
+        this.setCurrentID(tNewMoment.ID);
         tNewMoment.setMarker(true);
 
         tNewMoment.title = (tNewMoment.ID === 0) ? "start\ncomienzo" : "Moment " + tNewMoment.ID;
@@ -140,17 +178,21 @@ export class Timeline {
     }
 
 
+/*
     handleNotification(iCommand: any): void {
 
     }
+*/
 
     /**
      * Used for debugging. Shows the types of components in the given State
      * @param iState
      */
+/*
     stateInfoString(iState: any) {
         const theComponents: any = iState["components"];
         const compArray = theComponents.map((el: any) => el.type);
         return compArray.join(" ");
     }
+*/
 }

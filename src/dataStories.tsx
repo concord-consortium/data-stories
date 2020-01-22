@@ -146,12 +146,12 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         StoryArea.displayNarrativeInTextBox(tMoment);
 
         this.makingMarker = false;
-        this.forceRender();
+        this.forceUpdate();
     }
 
     private deleteCurrentMarker(): void {
-        this.timeline.deleteCurrentMarker();
-        this.forceRender();
+        this.timeline.deleteCurrentMoment();
+        this.forceUpdate();
     }
 
     /**
@@ -205,7 +205,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                                     narrativeIndex = separatorIndex + kSeparatorString.length;
                                     const newTitle = boxText.substring(0, separatorIndex);
                                     theFocusMoment.setTitle(newTitle.trim());
-                                    this.forceRender();     //  put the new title into the timeline
+                                    this.forceUpdate();     //  put the new title into the timeline
                                 }
 
                             }
@@ -258,14 +258,23 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         if (tMoment) {
             console.log('Click; go to moment [' + tMoment.title + ']');
             await this.restoreCodapState(tMoment.codapState);
-            this.forceRender();
+            this.forceUpdate();
             StoryArea.displayNarrativeInTextBox(tMoment);
         }
     }
 
+    private handleDragOver(e: React.DragEvent) {
+        const theControlArea = document.getElementById("controlArea");
+        if (theControlArea) {
+            const currentX = e.clientX - theControlArea.offsetWidth;
+            console.log("Dragging " + currentX);
+        }
+    }
+/*
     public forceRender() {
         this.setState({numNotifications: this.timeline.length()});
     }
+*/
 
     /**
      * Given a Moment, display its narrative in the narrative text box
@@ -297,7 +306,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 
         const focusButtonGuts = (this.state.storyMode === "scrubber") ? kMagnifyingGlass : "back to timeline";
         const scrubberControlArea = (
-            <div className="control-area">
+            <div id="controlArea" className="control-area">
                 {/*   delete button */}
                 <div id="deleteButton"
                      className="story-child tool icon-button"
@@ -327,7 +336,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         );
 
         const focusControlArea = (
-            <div className="control-area">
+            <div id="controlArea" className="control-area">
                 {/*  start with the Focus button */}
                 <div className="story-child tool"
                      onClick={this.changeStoryMode}
@@ -357,7 +366,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                     <MomentView
                         key={aMoment.ID}
                         onClick={(e: MouseEvent) => this_.onMomentClick(e, aMoment.ID)}
-                        isCurrent={aMoment.ID === this_.timeline.getCurrentIndex()}
+                        isCurrent={aMoment.ID === this_.timeline.getCurrentID()}
                         theText={aMoment.title}
                         isMarker={aMoment.isMarker}
                     />
@@ -366,7 +375,9 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         );
 
         const momentsArea = (
-            <div className="story-area">
+            <div className="story-area container-drag"
+                 onDragOver={(e : React.DragEvent) => this.handleDragOver(e)}
+            >
                 {theMoments}
             </div>
         );
@@ -392,7 +403,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                                 const theText: string = e.target.value;
                                 theFocusMoment.setTitle(theText);
                                 StoryArea.displayNarrativeInTextBox(theFocusMoment);
-                                this.forceRender();
+                                this.forceUpdate();
                             }}
                         />
                         ({theFocusMoment.created.toLocaleTimeString()})
@@ -406,7 +417,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                             const theText: string = e.target.value;
                             theFocusMoment.setNarrative(theText);
                             StoryArea.displayNarrativeInTextBox(theFocusMoment);
-                            this.forceRender();
+                            this.forceUpdate();
                         }}
                     />
                     <br/>
@@ -417,7 +428,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                         checked={theFocusMoment.isMarker}
                         onChange={() => {
                             theFocusMoment.setMarker(!theFocusMoment.isMarker);
-                            this.forceRender();
+                            this.forceUpdate();
                         }}
                     />
 
