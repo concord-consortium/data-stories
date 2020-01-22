@@ -150,7 +150,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
     }
 
     private deleteCurrentMarker(): void {
-        this.timeline.deleteCurrentMoment();
+        this.timeline.removeCurrentMoment();
         this.forceUpdate();
     }
 
@@ -199,9 +199,9 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                             const separatorIndex = boxText.indexOf(kSeparatorString);
                             let narrativeIndex = 0;
                             if (separatorIndex > 0) {
-                                const theFocusMoment: Moment | undefined = this.timeline.currentMoment();
+                                const theFocusMoment: Moment | null = this.timeline.currentMoment;
 
-                                if (theFocusMoment !== undefined) {
+                                if (theFocusMoment !== null) {
                                     narrativeIndex = separatorIndex + kSeparatorString.length;
                                     const newTitle = boxText.substring(0, separatorIndex);
                                     theFocusMoment.setTitle(newTitle.trim());
@@ -366,7 +366,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                     <MomentView
                         key={aMoment.ID}
                         onClick={(e: MouseEvent) => this_.onMomentClick(e, aMoment.ID)}
-                        isCurrent={aMoment.ID === this_.timeline.getCurrentID()}
+                        isCurrent={aMoment === this_.timeline.currentMoment}
                         theText={aMoment.title}
                         isMarker={aMoment.isMarker}
                     />
@@ -386,9 +386,9 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         If we are editing (focusing on) a particular moment, we look in detail at that moment,
         which we call theFocusMoment.
          */
-        const theFocusMoment: Moment | undefined = this.timeline.currentMoment();       //  focusMoment();
+        const theFocusMoment: Moment | null = this.timeline.currentMoment;       //  focusMoment();
 
-        const focusArea = (theFocusMoment !== undefined) ?
+        const focusArea = (theFocusMoment !== null) ?
             (
                 <div className="focus-area">
                     <p>

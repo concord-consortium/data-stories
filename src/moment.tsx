@@ -1,22 +1,25 @@
-import React, {Component} from "react";
+import React from "react";
 
+/*
 interface IStringKeyedObject {
     [key: string]: string;
 }
+*/
 
 export class Moment {
 
     public ID: number = -1;     //  todo: do we need this at all?
-    public prev: number = -1;
-    public next: number = -1;
+    public prev: Moment | null = null;
+    public next: Moment | null = null;
     //  public codapStateDiff: [number, object][] = [];
     public  codapState: object = {};
 
     public isMarker: boolean = false;
     public title: string = "";
-    public created: Date = new Date();
+    public created: Date;
     public narrative: string = "";
 
+/*
     private componentMap: IStringKeyedObject = {
         'DG.GameView': 'plugin',
         'DG.GraphView': 'graph',
@@ -28,12 +31,15 @@ export class Moment {
         'DG.CaseCard': 'case card',
         'calcView': 'Calculator'
     };
+*/
 
     constructor(iState: any) {
         this.codapState = iState;
         this.setTitle("moment");
+        this.created = new Date();
     }
 
+/*
     parseCommand(iCommand: any): any {
         let out = {
             title: "",
@@ -99,6 +105,7 @@ export class Moment {
         out.title = theNewMomentTitle;
         return out;
     }
+*/
 
     setTitle(iTitle: string) {
         this.title = iTitle;
