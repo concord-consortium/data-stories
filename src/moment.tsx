@@ -12,26 +12,26 @@ export class Moment {
     public prev: Moment | null = null;
     public next: Moment | null = null;
     //  public codapStateDiff: [number, object][] = [];
-    public  codapState: object = {};
+    public codapState: object = {};
 
     public isMarker: boolean = false;
     public title: string = "";
     public created: Date;
     public narrative: string = "";
 
-/*
-    private componentMap: IStringKeyedObject = {
-        'DG.GameView': 'plugin',
-        'DG.GraphView': 'graph',
-        'DG.MapView': 'map',
-        'DG.SliderView': 'slider',
-        'DG.TextView': 'text',
-        'DG.Calculator': 'calculator',
-        'DG.TableView': 'case table',
-        'DG.CaseCard': 'case card',
-        'calcView': 'Calculator'
-    };
-*/
+    /*
+        private componentMap: IStringKeyedObject = {
+            'DG.GameView': 'plugin',
+            'DG.GraphView': 'graph',
+            'DG.MapView': 'map',
+            'DG.SliderView': 'slider',
+            'DG.TextView': 'text',
+            'DG.Calculator': 'calculator',
+            'DG.TableView': 'case table',
+            'DG.CaseCard': 'case card',
+            'calcView': 'Calculator'
+        };
+    */
 
     constructor(iState: any) {
         this.codapState = iState;
@@ -39,73 +39,73 @@ export class Moment {
         this.created = new Date();
     }
 
-/*
-    parseCommand(iCommand: any): any {
-        let out = {
-            title: "",
-        };
+    /*
+        parseCommand(iCommand: any): any {
+            let out = {
+                title: "",
+            };
 
-        function formComponentMessage() {
-            let cMsg = '',
-                cTitle = ' ' + (iCommand.values.title || '');
-            if (iCommand.values.type === 'calculator') {
-                cMsg = 'Calculator'
-            } else {
-                cMsg = iCommand.values.type + cTitle;
-            }
-            return cMsg;
-        }
-
-        let theNewMomentTitle = '',
-            numCases = 0;
-
-        iCommand.values.type = this.componentMap[iCommand.values.type] || iCommand.values.type;
-        switch (iCommand.values.operation) {
-            case 'createCases':
-                numCases = iCommand.values.result.caseIDs.length;
-                theNewMomentTitle = 'create ' + numCases + (numCases > 1 ? ' cases' : ' case');
-                break;
-            case 'create':
-                theNewMomentTitle = 'create ' + formComponentMessage();
-                break;
-            case 'delete':
-                theNewMomentTitle = 'delete ' + formComponentMessage();
-                break;
-            case 'beginMoveOrResize':
-                break;
-            case 'move':
-            case 'resize':
-                theNewMomentTitle = iCommand.values.operation + ' ' + formComponentMessage();
-                break;
-            case 'selectCases':
-                if (iCommand.values.result.cases) {
-                    numCases = iCommand.values.result.cases.length;
-                    theNewMomentTitle = 'select ' + numCases + ' case' + (numCases > 1 ? 's' : '');
-                }
-                break;
-            case 'hideSelected':
-                theNewMomentTitle = 'hide selected cases';
-                break;
-            case 'attributeChange':
-                theNewMomentTitle = 'plot attribute "' + iCommand.values.attributeName + '" on graph';
-                break;
-            case 'legendAttributeChange':
-                theNewMomentTitle = 'plot attribute "' + iCommand.values.attributeName + '" on graph legend';
-                break;
-            case 'edit':
-                theNewMomentTitle = 'edit ' + iCommand.values.title;
-                break;
-            default:
-                if (iCommand.values.globalValue) {
-                    theNewMomentTitle = "change slider";
+            function formComponentMessage() {
+                let cMsg = '',
+                    cTitle = ' ' + (iCommand.values.title || '');
+                if (iCommand.values.type === 'calculator') {
+                    cMsg = 'Calculator'
                 } else {
-                    theNewMomentTitle = iCommand.values.operation;
+                    cMsg = iCommand.values.type + cTitle;
                 }
+                return cMsg;
+            }
+
+            let theNewMomentTitle = '',
+                numCases = 0;
+
+            iCommand.values.type = this.componentMap[iCommand.values.type] || iCommand.values.type;
+            switch (iCommand.values.operation) {
+                case 'createCases':
+                    numCases = iCommand.values.result.caseIDs.length;
+                    theNewMomentTitle = 'create ' + numCases + (numCases > 1 ? ' cases' : ' case');
+                    break;
+                case 'create':
+                    theNewMomentTitle = 'create ' + formComponentMessage();
+                    break;
+                case 'delete':
+                    theNewMomentTitle = 'delete ' + formComponentMessage();
+                    break;
+                case 'beginMoveOrResize':
+                    break;
+                case 'move':
+                case 'resize':
+                    theNewMomentTitle = iCommand.values.operation + ' ' + formComponentMessage();
+                    break;
+                case 'selectCases':
+                    if (iCommand.values.result.cases) {
+                        numCases = iCommand.values.result.cases.length;
+                        theNewMomentTitle = 'select ' + numCases + ' case' + (numCases > 1 ? 's' : '');
+                    }
+                    break;
+                case 'hideSelected':
+                    theNewMomentTitle = 'hide selected cases';
+                    break;
+                case 'attributeChange':
+                    theNewMomentTitle = 'plot attribute "' + iCommand.values.attributeName + '" on graph';
+                    break;
+                case 'legendAttributeChange':
+                    theNewMomentTitle = 'plot attribute "' + iCommand.values.attributeName + '" on graph legend';
+                    break;
+                case 'edit':
+                    theNewMomentTitle = 'edit ' + iCommand.values.title;
+                    break;
+                default:
+                    if (iCommand.values.globalValue) {
+                        theNewMomentTitle = "change slider";
+                    } else {
+                        theNewMomentTitle = iCommand.values.operation;
+                    }
+            }
+            out.title = theNewMomentTitle;
+            return out;
         }
-        out.title = theNewMomentTitle;
-        return out;
-    }
-*/
+    */
 
     setTitle(iTitle: string) {
         this.title = iTitle;
@@ -126,8 +126,10 @@ export function MomentView(props: any) {
     let theClasses = " story-child marker";
     if (props.isCurrent) theClasses += " current";
     return (
-        <div className={theClasses}
+        <div id={"DSMarker" + props.id}
+             className={theClasses}
              draggable
+             onDragStart={props.onDragStart}
              onClick={props.onClick}
              title={props.theText}
         >

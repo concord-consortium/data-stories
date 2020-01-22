@@ -88,7 +88,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 
         this.handleNotification = this.handleNotification.bind(this);
         this.changeStoryMode = this.changeStoryMode.bind(this);
-        this.deleteCurrentMarker = this.deleteCurrentMarker.bind(this);
+        this.handleDeleteCurrentMoment = this.handleDeleteCurrentMoment.bind(this);
         this.startMakingMarker = this.startMakingMarker.bind(this);
 
         codapInterface.on('notify', '*', '', this.handleNotification);
@@ -149,30 +149,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         this.forceUpdate();
     }
 
-    private deleteCurrentMarker(): void {
-        this.timeline.removeCurrentMoment();
-        this.forceUpdate();
-    }
 
-    /**
-     * Toggle story mode between `scrubber` and `focus`.
-     * Change the shape of the Iframe, then change the (React) state;
-     * then, on render(), actually display different material (e.g., detailed info on a moment when `state.storyMode` is `scrubber`.)
-     */
-    private changeStoryMode(): void {
-
-        const newMode = (this.state.storyMode === 'focus') ? 'scrubber' : 'focus';
-
-        const theMessage = {
-            action: "update",
-            resource: "interactiveFrame",
-            values: {
-                dimensions: (newMode === 'focus') ? kInitialTallDimensions : kInitialWideDimensions
-            }
-        };
-        codapInterface.sendRequest(theMessage);     //  change the shape of the plugin
-        this.setState({storyMode: newMode});
-    }
 
     /**
      * Responsible for handling the various notifications we receive
@@ -191,6 +168,8 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                 if (iCommand.values.operation === 'edit') {
                     if (iCommand.values.type === "DG.TextView" &&
                         iCommand.values.title === kNarrativeTextBoxName) {
+
+                        //  we are notified of a change to the text in the "Narrative" text box
 
                         const theMessage = {action: "get", resource: "component[" + kNarrativeTextBoxName + "]"};
                         const theResult: any = await codapInterface.sendRequest(theMessage);
@@ -222,6 +201,11 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
     }
 
 
+    private restoreCodapStateFromMoment(iMoment: Moment | null ) {
+        const newState =  (iMoment) ? iMoment.codapState : null;
+        this.restoreCodapState(newState);
+    }
+
     /**
      * Asks CODAP to restore itself to the given state.
      * Note: sets restoreInProgress while it's running and resolving its promises
@@ -250,41 +234,63 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
      * @param e     the mouse event
      * @param iID   the ID of the moment (set in the original onClick)
      */
-    public async onMomentClick(e: MouseEvent, iID: number) {
-        //  this.focusMomentIndex = iID;
-        let tMoment: Moment | null = this.timeline.onMomentClick(iID); //  sets current index, current state
-
+    public async onMomentClick(e: MouseEvent, iMoment: Moment) {
         //  if there is an actual moment, do the time-travel using `restoreCodapState`.
-        if (tMoment) {
-            console.log('Click; go to moment [' + tMoment.title + ']');
-            await this.restoreCodapState(tMoment.codapState);
+        if (iMoment) {
+            this.timeline.handleMomentClick(iMoment);
+            await this.restoreCodapStateFromMoment(iMoment);
             this.forceUpdate();
-            StoryArea.displayNarrativeInTextBox(tMoment);
+            StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
         }
+    }
+
+    /**
+     * Called directly from the DOM
+     */
+    private handleDeleteCurrentMoment(): void {
+        this.timeline.removeCurrentMoment();    //  also sets a new currentMoment
+        StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
+        this.restoreCodapStateFromMoment(this.timeline.currentMoment);
+        this.forceUpdate();     //  remove the marker from the bar, point at the current one
+    }
+
+    private handleDrop(e : React.DragEvent) {
+        let currentX = 0;
+
+        e.stopPropagation();
+        e.preventDefault();
+        this.timeline.handleDrop(e.clientX);
+        console.log("drop at x = " + currentX);
+        StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
+        this.restoreCodapStateFromMoment(this.timeline.currentMoment);
     }
 
     private handleDragOver(e: React.DragEvent) {
+        e.stopPropagation();
+        e.preventDefault();
         const theControlArea = document.getElementById("controlArea");
         if (theControlArea) {
             const currentX = e.clientX - theControlArea.offsetWidth;
-            console.log("Dragging " + currentX);
         }
     }
-/*
-    public forceRender() {
-        this.setState({numNotifications: this.timeline.length()});
-    }
-*/
 
     /**
      * Given a Moment, display its narrative in the narrative text box
      * @param iMoment
      */
-    private static displayNarrativeInTextBox(iMoment: Moment): void {
+    private static displayNarrativeInTextBox(iMoment: Moment | null): void {
+        let titleString, narrativeString;
+        if (iMoment) {
+            titleString = iMoment.title;
+            narrativeString = iMoment.narrative;
+        } else {
+            titleString = "No moments!";
+            narrativeString = "Press the checkbox to save a Moment in the Moment Bar.";
+        }
         const textBoxObject = {
             type: "text",
             name: kNarrativeTextBoxName,
-            text: iMoment.title + kSeparatorString + iMoment.narrative
+            text: titleString + kSeparatorString + narrativeString
         };
 
         const theMessage = {
@@ -293,8 +299,29 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
             values: textBoxObject
         };
 
-        codapInterface.sendRequest(theMessage);
+        const Result = codapInterface.sendRequest(theMessage);
     }
+
+    /**
+     * Toggle story mode between `scrubber` and `focus`.
+     * Change the shape of the Iframe, then change the (React) state;
+     * then, on render(), actually display different material (e.g., detailed info on a moment when `state.storyMode` is `scrubber`.)
+     */
+    private changeStoryMode(): void {
+
+        const newMode = (this.state.storyMode === 'focus') ? 'scrubber' : 'focus';
+
+        const theMessage = {
+            action: "update",
+            resource: "interactiveFrame",
+            values: {
+                dimensions: (newMode === 'focus') ? kInitialTallDimensions : kInitialWideDimensions
+            }
+        };
+        codapInterface.sendRequest(theMessage);     //  change the shape of the plugin
+        this.setState({storyMode: newMode});
+    }
+
 
     public render() {
         let this_ = this;
@@ -310,7 +337,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                 {/*   delete button */}
                 <div id="deleteButton"
                      className="story-child tool icon-button"
-                     onClick={this.deleteCurrentMarker}
+                     onClick={this.handleDeleteCurrentMoment}
                      title={"press to delete the current moment"}
                 >
                     {kTrashCan}
@@ -365,7 +392,12 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
                 return (
                     <MomentView
                         key={aMoment.ID}
-                        onClick={(e: MouseEvent) => this_.onMomentClick(e, aMoment.ID)}
+                        id={aMoment.ID}
+                        onDragStart = {
+                            (e: React.DragEvent) =>
+                                this_.timeline.handleDragStart(e, aMoment)
+                        }
+                        onClick={(e: MouseEvent) => this_.onMomentClick(e, aMoment)}
                         isCurrent={aMoment === this_.timeline.currentMoment}
                         theText={aMoment.title}
                         isMarker={aMoment.isMarker}
@@ -376,7 +408,12 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 
         const momentsArea = (
             <div className="story-area container-drag"
-                 onDragOver={(e : React.DragEvent) => this.handleDragOver(e)}
+                 onDragOver={(e : React.DragEvent) => this_.handleDragOver(e)}
+                 onDrop = {(e : React.DragEvent) => {
+                     console.log("Dropping at " + e.clientX);
+                     this.handleDrop(e);
+                     this.forceUpdate();
+                 }}
             >
                 {theMoments}
             </div>

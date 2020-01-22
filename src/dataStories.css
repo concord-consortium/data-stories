@@ -80,6 +80,7 @@
 .marker {
     width: 40px;
     background-color: #cde; /* #9ab;    */
+    text-align: center;
 }
 
 .current {
