@@ -1,6 +1,6 @@
 .App {
     text-align: center;
-    background-color: #eee;
+    background-color: #e8e8e8;
 
 
 }
@@ -33,6 +33,7 @@
     text-align: left;
     border: none;
     overflow: auto;
+    background-color: #89a;
 }
 .story-area {
     display: flex;
@@ -41,6 +42,9 @@
     text-align: left;
     border: none;
     overflow: auto;
+    padding-left: 20px;
+    padding-right: 20px;
+    border-right: 8px solid gray;
 }
 
 .focus-area {
@@ -79,12 +83,12 @@
 
 .marker {
     width: 40px;
-    background-color: #cde; /* #9ab;    */
+    background-color: #bcd; /* #9ab;    */
     text-align: center;
 }
 
 .current {
-    background-color: #9ab;
+    background-color: #abc;
     height: 28px;
     border: 2px solid;
 }
@@ -98,4 +102,8 @@
 
 .icon-button {
     font-size: 20px;
+}
+
+.container-drag {
+    background-color: #def;
 }

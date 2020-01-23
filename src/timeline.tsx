@@ -1,5 +1,6 @@
 //  import jiff from "jiff";
 import {Moment} from "./moment";
+import React, {Component} from 'react';
 
 
 export class Timeline {
@@ -37,11 +38,13 @@ export class Timeline {
      * Return the (entire) Moment model corresponding to the given ID.
      * @param iID
      */
+/*
     momentByID(iID: number): Moment {
         return this.moments.find(function (xSE) {
             return xSE.ID === iID
         }) as Moment;
     }
+*/
 
     /**
      * Called from above. User has clicked on a particular moment, so we are about to time travel there.
@@ -103,9 +106,10 @@ export class Timeline {
                             }
             */
 
-
-            this.removeMoment(this.momentBeingDragged);
-            this.insertMomentAfterMoment(this.momentBeingDragged, pMoment);
+            if (this.momentBeingDragged !== pMoment) {
+                this.removeMoment(this.momentBeingDragged);
+                this.insertMomentAfterMoment(this.momentBeingDragged, pMoment);
+            }
         }
         const returnValue : Moment | null = this.momentBeingDragged;
         this.momentBeingDragged = null;

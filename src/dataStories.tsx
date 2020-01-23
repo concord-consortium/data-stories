@@ -232,7 +232,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
      * Handles a user click on a moment in the timeline.
      *
      * @param e     the mouse event
-     * @param iID   the ID of the moment (set in the original onClick)
+     * @param iMoment   the moment (set in the original onClick)
      */
     public async onMomentClick(e: MouseEvent, iMoment: Moment) {
         //  if there is an actual moment, do the time-travel using `restoreCodapState`.
@@ -249,9 +249,9 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
      */
     private handleDeleteCurrentMoment(): void {
         this.timeline.removeCurrentMoment();    //  also sets a new currentMoment
-        StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
         this.restoreCodapStateFromMoment(this.timeline.currentMoment);
         this.forceUpdate();     //  remove the marker from the bar, point at the current one
+        StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
     }
 
     private handleDrop(e : React.DragEvent) {
@@ -261,16 +261,17 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
         e.preventDefault();
         this.timeline.handleDrop(e.clientX);
         console.log("drop at x = " + currentX);
-        StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
         this.restoreCodapStateFromMoment(this.timeline.currentMoment);
+        StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
+
     }
 
-    private handleDragOver(e: React.DragEvent) {
+    private static handleDragOver(e: React.DragEvent) {
         e.stopPropagation();
         e.preventDefault();
         const theControlArea = document.getElementById("controlArea");
         if (theControlArea) {
-            const currentX = e.clientX - theControlArea.offsetWidth;
+            //  const currentX = e.clientX - theControlArea.offsetWidth;
         }
     }
 
@@ -408,7 +409,7 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 
         const momentsArea = (
             <div className="story-area container-drag"
-                 onDragOver={(e : React.DragEvent) => this_.handleDragOver(e)}
+                 onDragOver={(e : React.DragEvent) => StoryArea.handleDragOver(e)}
                  onDrop = {(e : React.DragEvent) => {
                      console.log("Dropping at " + e.clientX);
                      this.handleDrop(e);
