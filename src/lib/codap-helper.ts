@@ -1,7 +1,10 @@
 import codapInterface from "./CodapInterface";
 
-export function initializePlugin(pluginName: string, version: string, dimensions: {width: number, height: number}) {
+export function initializePlugin(pluginName: string, version: string, dimensions: {width: number, height: number},
+																 iStateHandler:(arg0: any) => void) {
   const interfaceConfig = {
+		stateHandler: iStateHandler,
+		customInteractiveStateHandler: iStateHandler ? true : false,
     name: pluginName,
     version: version,
     dimensions: dimensions,

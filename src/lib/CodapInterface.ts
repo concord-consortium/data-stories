@@ -90,7 +90,7 @@ var config: IConfig | null = null;
  * initiated by the init method if CODAP was started from a previously saved
  * document.
  */
-var interactiveState = {};
+var interactiveState:any = {};
 
 /**
  * A list of subscribers to messages from CODAP
