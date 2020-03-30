@@ -5,7 +5,9 @@ import {Timeline} from './timeline';
 import {MomentView, Moment} from './moment';
 import './dataStories.css';
 
-const kPluginName = "Moment Bar";
+import shutterImage from "./art/shutter.png";
+
+const kPluginName = "Story Builder";
 const kInitialMarkerStartDelay = 1200;      //  milliseconds
 const kNarrativeTextBoxName = "narrative";
 const kMagnifyingGlass = "\ud83d\udd0d";
@@ -22,6 +24,14 @@ const kInitialTallDimensions = {
 	width: 333,
 	height: 555
 };
+
+function Credits(props : any) {
+    return (
+        <div id={"credits"}>
+            <div>Some icons made by <a href="https://www.flaticon.com/authors/fjstudio" title="fjstudio">fjstudio</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></div>
+        </div>
+    )
+}
 
 /**
  * If necessary, create a text component to hold information about the
@@ -180,34 +190,36 @@ class StoryArea extends Component<{callbackToAssignRestoreStateFunc:any}, { numN
 	}
 
 
-	/**
-	 * Responsible for handling the various notifications we receive
-	 * when the user makes an undoable action,
-	 * and also when CODAP respomds to our requests to move to a different codapState
-	 *
-	 * @param iCommand    the Command resulting from the user action
-	 */
-	private async handleNotification(iCommand: any): Promise<any> {
-		if (iCommand.resource !== 'undoChangeNotice') {     //  ignore all of these
-			if (iCommand.values.operation === 'newDocumentState') {
-				if (this.waitingForDocumentState) {
-					this.receiveNewDocumentState(iCommand);
-				}
-			} else {
-				if (iCommand.values.operation === 'edit') {
-					if (iCommand.values.type === "DG.TextView" &&
-						iCommand.values.title === kNarrativeTextBoxName) {
+
+    /**
+     * Responsible for handling the various notifications we receive
+     * when the user makes an undoable action,
+     * and also when CODAP respomds to our requests to move to a different codapState
+     *
+     * @param iCommand    the Command resulting from the user action
+     */
+    private async handleNotification(iCommand: any): Promise<any> {
+        if (iCommand.resource !== 'undoChangeNotice') {     //  ignore all of these
+            if (iCommand.values.operation === 'newDocumentState') {
+                if (this.waitingForDocumentState) {
+                    this.receiveNewDocumentState(iCommand);
+                }
+            } else {
+                if (iCommand.values.operation === 'edit') {
+                    console.log(`    edit notification on: ${iCommand.values.type} name ${iCommand.values.name}`);if (iCommand.values.type === "DG.TextView" &&
+                        iCommand.values.name === kNarrativeTextBoxName) {
 
 						//  we are notified of a change to the text in the "Narrative" text box
 
-						const theMessage = {action: "get", resource: "component[" + kNarrativeTextBoxName + "]"};
-						const theResult: any = await codapInterface.sendRequest(theMessage);
-						if (theResult.success) {
-							const boxText = theResult.values.text;
-							const separatorIndex = boxText.indexOf(kSeparatorString);
-							let narrativeIndex = 0;
-							if (separatorIndex > 0) {
-								const theFocusMoment: Moment | null = this.timeline.currentMoment;
+                        const theMessage = {action: "get", resource: "component[" + kNarrativeTextBoxName + "]"};
+                        const theResult: any = await codapInterface.sendRequest(theMessage);
+                        if (theResult.success) {
+                            console.log(`    result successful`);const boxText = theResult.values.text;const boxTitle = theResult.values.title;
+/*
+                            const separatorIndex = boxText.indexOf(kSeparatorString);
+                            let narrativeIndex = 0;
+                            if (separatorIndex > 0) {
+                                const theFocusMoment: Moment | null = this.timeline.currentMoment;
 
 								if (theFocusMoment !== null) {
 									narrativeIndex = separatorIndex + kSeparatorString.length;
@@ -216,13 +228,15 @@ class StoryArea extends Component<{callbackToAssignRestoreStateFunc:any}, { numN
 									this.forceUpdate();     //  put the new title into the timeline
 								}
 
-							}
-							const theNewNarrative = boxText.substring(narrativeIndex);
-							console.log("Text get result is " + theNewNarrative);
-							this.timeline.setNewNarrative(theNewNarrative.trim());
-						}
-					}
-				}
+                            }
+                            const theNewNarrative = boxText.substring(narrativeIndex);
+                            console.log("Text get result is " + theNewNarrative);
+                            this.timeline.setNewNarrative(theNewNarrative.trim());
+                        */
+                    console.log(`    narrative title: ${boxTitle} text: ${boxText}`);
+                            this.timeline.setNewNarrative(boxText, boxTitle);
+                        }}
+                }
 
 				//  this.timeline.handleNotification(iCommand);
 			}
@@ -304,24 +318,25 @@ class StoryArea extends Component<{callbackToAssignRestoreStateFunc:any}, { numN
 		}
 	}
 
-	/**
-	 * Given a Moment, display its narrative in the narrative text box
-	 * @param iMoment
-	 */
-	private static displayNarrativeInTextBox(iMoment: Moment | null): void {
-		let titleString, narrativeString;
-		if (iMoment) {
-			titleString = iMoment.title;
-			narrativeString = iMoment.narrative;
-		} else {
-			titleString = "No moments!";
-			narrativeString = "Press the checkbox to save a Moment in the Moment Bar.";
-		}
-		const textBoxObject = {
-			type: "text",
-			name: kNarrativeTextBoxName,
-			text: titleString + kSeparatorString + narrativeString
-		};
+    /**
+     * Given a Moment, display its narrative in the narrative text box
+     * @param iMoment
+     */
+    private static displayNarrativeInTextBox(iMoment: Moment | null): void {
+        let titleString, narrativeString;
+        if (iMoment) {
+            titleString = iMoment.title;
+            narrativeString = iMoment.narrative;
+        } else {
+            titleString = "No moments!";
+            narrativeString = "Press the shutter to save a Moment in the Story Builder.";
+        }
+        const textBoxObject = {
+            type: "text",
+            name: kNarrativeTextBoxName,
+            title: titleString ,
+            text: narrativeString,
+        };console.log(`    displayNarrative with ${JSON.stringify(textBoxObject)}`);
 
 		const theMessage = {
 			action: "update",
@@ -341,16 +356,16 @@ class StoryArea extends Component<{callbackToAssignRestoreStateFunc:any}, { numN
 
 		const newMode = (this.state.storyMode === 'focus') ? 'scrubber' : 'focus';
 
-		const theMessage = {
-			action: "update",
-			resource: "interactiveFrame",
-			values: {
-				dimensions: (newMode === 'focus') ? kInitialTallDimensions : kInitialWideDimensions
-			}
-		};
-		codapInterface.sendRequest(theMessage);     //  change the shape of the plugin
-		this.setState({storyMode: newMode});
-	}
+        const theMessage = {
+            action: "update",
+            resource: "interactiveFrame",
+            values: {
+                dimensions: (newMode === 'focus') ? kInitialTallDimensions : kInitialWideDimensions
+            }
+        };
+        codapInterface.sendRequest(theMessage);     //  change the shape of the plugin
+        this.setState({storyMode: newMode});
+    }
 
 
 	public render() {
@@ -383,14 +398,15 @@ class StoryArea extends Component<{callbackToAssignRestoreStateFunc:any}, { numN
                 </div>
 */}
 
-				<div className="story-child tool icon-button"
-						 onClick={this.startMakingMarker}
-						 title={"mark the current state"}
-				>
-					{kCheckmark}
-				</div>
-			</div>
-		);
+                <div className="story-child tool icon-button"
+                     onClick={this.startMakingMarker}
+                     title={"mark the current state"}
+                >
+                    <img width={"28"} src={shutterImage}></img>
+                    {/*{kCheckmark}*/}
+                </div>
+            </div>
+        );
 
 		const focusControlArea = (
 			<div id="controlArea" className="control-area">
@@ -561,7 +577,7 @@ class DataStories
 			codapInterface.sendRequest(getComponentListMessage).then(
 				(tResult: any) => {
 					const listResult = tResult.values;
-					console.log('the list result: ' + JSON.stringify(listResult));
+					console.log('components: ' + JSON.stringify(listResult));
 					let thePluginID = null;
 					listResult.forEach((c: any) => {
 						if (c.title === kPluginName) {

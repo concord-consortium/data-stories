@@ -268,7 +268,7 @@ export class Timeline {
 		this.currentMoment = tNewMoment;
 		tNewMoment.setMarker(true);
 
-		tNewMoment.title = (tNewMoment.ID === 0) ? "start\ncomienzo" : "Moment " + tNewMoment.ID;
+		tNewMoment.title = (tNewMoment.ID === 0) ? "start/comienzo" : "Moment " + tNewMoment.ID;
 		tNewMoment.narrative = "What did you do? Why did you do it?\n¿Qué hizo? ¿Por qué?";
 		return tNewMoment;
 	}
@@ -280,9 +280,12 @@ export class Timeline {
 	 *
 	 * @param iString
 	 */
-	setNewNarrative(iString: string): void {
+	setNewNarrative(iText: string, iTitle: string): void {
 		let theMoment = this.currentMoment;
-		if (theMoment) theMoment.setNarrative(iString);
+		if (theMoment) {
+            theMoment.setNarrative(iText);
+            theMoment.setTitle(iTitle);
+        }
 	}
 
 
