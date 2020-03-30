@@ -1,16 +1,15 @@
 import codapInterface from "./CodapInterface";
 
 export function initializePlugin(pluginName: string, version: string, dimensions: {width: number, height: number},
-																 iStateHandler:(arg0: any) => void) {
+																 iRestoreStateHandler:(arg0: any) => void) {
   const interfaceConfig = {
-		stateHandler: iStateHandler,
-		customInteractiveStateHandler: iStateHandler ? true : false,
+		customInteractiveStateHandler: true,
     name: pluginName,
     version: version,
     dimensions: dimensions,
     subscribeToDocuments: true
   };
-  return codapInterface.init(interfaceConfig);
+  return codapInterface.init(interfaceConfig, iRestoreStateHandler);
 }
 
 const dataSetString = (contextName: string) => `dataContext[${contextName}]`;

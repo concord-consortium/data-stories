@@ -13,7 +13,7 @@ const kCheckmark = "\u2714";
 const kTrashCan = "\uD83D\uddd1";
 const kSeparatorString = "\n\n";
 
-const kVersion = "0.1";
+const kVersion = "0.2";
 const kInitialWideDimensions = {
 	width: 800,
 	height: 100
@@ -76,22 +76,27 @@ async function needNarrativeTextBox(): Promise<boolean> {
 
 window.onload = makeInitialNarrativeTextBox;
 
-class StoryArea extends Component<{}, { numNotifications: number, stateID: number, storyMode: string }> {
+class StoryArea extends Component<{callbackToAssignRestoreStateFunc:any}, { numNotifications: number, stateID: number, storyMode: string }> {
 	private timeline: Timeline = new Timeline(this);
 	private restoreInProgress = false;
 	private waitingForDocumentState = false;
 	private makingMarker = false;
 
-	constructor(props: any) {
+	constructor(props:any) {
 		super(props);
 		this.state = {numNotifications: 0, stateID: -1, storyMode: 'scrubber'};
+
 
 		this.handleNotification = this.handleNotification.bind(this);
 		this.changeStoryMode = this.changeStoryMode.bind(this);
 		this.handleDeleteCurrentMoment = this.handleDeleteCurrentMoment.bind(this);
 		this.startMakingMarker = this.startMakingMarker.bind(this);
+		this.getPluginState = this.getPluginState.bind(this);
+		this.restorePluginState = this.restorePluginState.bind(this);
 
 		codapInterface.on('notify', '*', '', this.handleNotification);
+		codapInterface.on('get', 'interactiveState', '', this.getPluginState);
+		codapInterface.on('update', 'interactiveState', '', this.restorePluginState);
 
 		/**
 		 * We delay the start making marker to let the text box appear;
@@ -99,10 +104,35 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 		 */
 		const this_ = this;
 		setTimeout(function () {
-			this_.startMakingMarker();    // Make the initial marker, which sets the initial state
+			if( !this_.timeline.startingMoment) {
+				this_.startMakingMarker();    // Make the initial marker, which sets the initial state
+			}
+			else {
+				this_.forceUpdate();
+			}
 		}, kInitialMarkerStartDelay);
 
 		console.log("Initial clear() completed. Initial mode is " + this.state.storyMode);
+	}
+
+	componentWillMount() {
+		this.props.callbackToAssignRestoreStateFunc(this.restorePluginState)
+	}
+
+	getPluginState(): any {
+		if( this.waitingForDocumentState) {
+			return {};
+		}
+		else {
+			return {
+				success: true,
+				values: this.timeline.createStorage()
+			};
+		}
+	}
+
+	restorePluginState( iStorage: any) {
+		this.timeline.restoreFromStorage( iStorage)
 	}
 
 	/**
@@ -111,8 +141,8 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
 	 * So we set a flag which gets unset in a partner method, `receiveNewDocumentState`.
 	 */
 	private requestDocumentState(): void {
-		codapInterface.sendRequest({action: 'get', resource: 'document'});
 		this.waitingForDocumentState = true;
+		codapInterface.sendRequest({action: 'get', resource: 'document'});
 	}
 
 	/**
@@ -496,18 +526,22 @@ class StoryArea extends Component<{}, { numNotifications: number, stateID: numbe
  */
 class DataStories
 	extends Component<{}, { shape: string }> {
+	private storyRestoreStateFunc:any;
 
 	constructor(props: any) {
 		super(props);
-		/*
-						this.changeShape = this.changeShape.bind(this);
-		*/
+		this.assignStoryRestoreStateFunc = this.assignStoryRestoreStateFunc.bind(this);
+		this.restorePluginState = this.restorePluginState.bind(this);
 		this.state = {shape: "wide"};
-		this.handleRequestForPluginState = this.handleRequestForPluginState.bind(this);
 	}
 
-	handleRequestForPluginState() {
-		// this.storyArea.handleRequestForPluginState()
+	assignStoryRestoreStateFunc( iFunc: any) {
+		this.storyRestoreStateFunc = iFunc;
+	}
+
+	restorePluginState( iState: any) {
+		if( this.storyRestoreStateFunc)
+			this.storyRestoreStateFunc( iState);
 	}
 
 	/**
@@ -515,7 +549,7 @@ class DataStories
 	 * Calls initializePlugin from codap-helper.
 	 */
 	public async componentWillMount() {
-		await initializePlugin(kPluginName, kVersion, kInitialWideDimensions, this.handleRequestForPluginState);
+		await initializePlugin(kPluginName, kVersion, kInitialWideDimensions, this.restorePluginState);
 
 		const getComponentListMessage = {
 			'action': 'get',
@@ -559,7 +593,7 @@ class DataStories
 
         return (
             <div className="App">
-                <StoryArea/>
+                <StoryArea callbackToAssignRestoreStateFunc = {this.assignStoryRestoreStateFunc}/>
             </div>
         );
     }

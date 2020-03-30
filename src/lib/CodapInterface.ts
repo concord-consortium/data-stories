@@ -237,11 +237,13 @@ const codapInterface = {
       connection = new IframePhoneRpcEndpoint(
           notificationHandler, "data-interactive", window.parent);
 
+/*
       if (!config.customInteractiveStateHandler) {
         this_.on('get', 'interactiveState', function () {
           return ({success: true, values: this_.getInteractiveState()});
         }.bind(this_));
       }
+*/
 
       // console.log('sending interactiveState: ' + JSON.stringify(this_.getInteractiveState));
       // update, then get the interactiveFrame.

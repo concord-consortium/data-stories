@@ -8,132 +8,152 @@ interface IStringKeyedObject {
 
 export class Moment {
 
-    public ID: number = -1;     //  todo: do we need this at all?
-    public prev: Moment | null = null;
-    public next: Moment | null = null;
-    //  public codapStateDiff: [number, object][] = [];
-    public codapState: object = {};
+	public ID: number = -1;     //  todo: do we need this at all?
+	public prev: Moment | null = null;
+	public next: Moment | null = null;
+	//  public codapStateDiff: [number, object][] = [];
+	public codapState: object = {};
 
-    public isMarker: boolean = false;
-    public title: string = "";
-    public created: Date;
-    public narrative: string = "";
+	public isMarker: boolean = false;
+	public title: string = "";
+	public created: Date;
+	public narrative: string = "";
 
-    /*
-        private componentMap: IStringKeyedObject = {
-            'DG.GameView': 'plugin',
-            'DG.GraphView': 'graph',
-            'DG.MapView': 'map',
-            'DG.SliderView': 'slider',
-            'DG.TextView': 'text',
-            'DG.Calculator': 'calculator',
-            'DG.TableView': 'case table',
-            'DG.CaseCard': 'case card',
-            'calcView': 'Calculator'
-        };
-    */
+	/*
+			private componentMap: IStringKeyedObject = {
+					'DG.GameView': 'plugin',
+					'DG.GraphView': 'graph',
+					'DG.MapView': 'map',
+					'DG.SliderView': 'slider',
+					'DG.TextView': 'text',
+					'DG.Calculator': 'calculator',
+					'DG.TableView': 'case table',
+					'DG.CaseCard': 'case card',
+					'calcView': 'Calculator'
+			};
+	*/
 
-    constructor(iState: any) {
-        this.codapState = iState;
-        this.setTitle("moment");
-        this.created = new Date();
-    }
+	constructor(iState: any) {
+		this.codapState = iState;
+		this.setTitle("moment");
+		this.created = new Date();
+	}
 
-    /*
-        parseCommand(iCommand: any): any {
-            let out = {
-                title: "",
-            };
+	createStorage() {
+		return {
+			ID: this.ID,
+			codapState: this.codapState,
+			isMarker: this.isMarker,
+			title: this.title,
+			created: this.created,
+			narrative: this.narrative
+		}
+	}
+	
+	restoreFromStorage(iStorage: any) {
+		this.ID = iStorage.ID;
+		this.isMarker = iStorage.isMarker;
+		this.title = iStorage.title;
+		this.created = new Date(iStorage.created);
+		this.narrative = iStorage.narrative;
 
-            function formComponentMessage() {
-                let cMsg = '',
-                    cTitle = ' ' + (iCommand.values.title || '');
-                if (iCommand.values.type === 'calculator') {
-                    cMsg = 'Calculator'
-                } else {
-                    cMsg = iCommand.values.type + cTitle;
-                }
-                return cMsg;
-            }
+	}
 
-            let theNewMomentTitle = '',
-                numCases = 0;
+	/*
+			parseCommand(iCommand: any): any {
+					let out = {
+							title: "",
+					};
 
-            iCommand.values.type = this.componentMap[iCommand.values.type] || iCommand.values.type;
-            switch (iCommand.values.operation) {
-                case 'createCases':
-                    numCases = iCommand.values.result.caseIDs.length;
-                    theNewMomentTitle = 'create ' + numCases + (numCases > 1 ? ' cases' : ' case');
-                    break;
-                case 'create':
-                    theNewMomentTitle = 'create ' + formComponentMessage();
-                    break;
-                case 'delete':
-                    theNewMomentTitle = 'delete ' + formComponentMessage();
-                    break;
-                case 'beginMoveOrResize':
-                    break;
-                case 'move':
-                case 'resize':
-                    theNewMomentTitle = iCommand.values.operation + ' ' + formComponentMessage();
-                    break;
-                case 'selectCases':
-                    if (iCommand.values.result.cases) {
-                        numCases = iCommand.values.result.cases.length;
-                        theNewMomentTitle = 'select ' + numCases + ' case' + (numCases > 1 ? 's' : '');
-                    }
-                    break;
-                case 'hideSelected':
-                    theNewMomentTitle = 'hide selected cases';
-                    break;
-                case 'attributeChange':
-                    theNewMomentTitle = 'plot attribute "' + iCommand.values.attributeName + '" on graph';
-                    break;
-                case 'legendAttributeChange':
-                    theNewMomentTitle = 'plot attribute "' + iCommand.values.attributeName + '" on graph legend';
-                    break;
-                case 'edit':
-                    theNewMomentTitle = 'edit ' + iCommand.values.title;
-                    break;
-                default:
-                    if (iCommand.values.globalValue) {
-                        theNewMomentTitle = "change slider";
-                    } else {
-                        theNewMomentTitle = iCommand.values.operation;
-                    }
-            }
-            out.title = theNewMomentTitle;
-            return out;
-        }
-    */
+					function formComponentMessage() {
+							let cMsg = '',
+									cTitle = ' ' + (iCommand.values.title || '');
+							if (iCommand.values.type === 'calculator') {
+									cMsg = 'Calculator'
+							} else {
+									cMsg = iCommand.values.type + cTitle;
+							}
+							return cMsg;
+					}
 
-    setTitle(iTitle: string) {
-        this.title = iTitle;
-        //  this.setState({title:iTitle});
-    }
+					let theNewMomentTitle = '',
+							numCases = 0;
 
-    setMarker(iMarker: boolean) {
-        this.isMarker = iMarker;
-        //  this.setState({isMarker: iMarker});
-    }
+					iCommand.values.type = this.componentMap[iCommand.values.type] || iCommand.values.type;
+					switch (iCommand.values.operation) {
+							case 'createCases':
+									numCases = iCommand.values.result.caseIDs.length;
+									theNewMomentTitle = 'create ' + numCases + (numCases > 1 ? ' cases' : ' case');
+									break;
+							case 'create':
+									theNewMomentTitle = 'create ' + formComponentMessage();
+									break;
+							case 'delete':
+									theNewMomentTitle = 'delete ' + formComponentMessage();
+									break;
+							case 'beginMoveOrResize':
+									break;
+							case 'move':
+							case 'resize':
+									theNewMomentTitle = iCommand.values.operation + ' ' + formComponentMessage();
+									break;
+							case 'selectCases':
+									if (iCommand.values.result.cases) {
+											numCases = iCommand.values.result.cases.length;
+											theNewMomentTitle = 'select ' + numCases + ' case' + (numCases > 1 ? 's' : '');
+									}
+									break;
+							case 'hideSelected':
+									theNewMomentTitle = 'hide selected cases';
+									break;
+							case 'attributeChange':
+									theNewMomentTitle = 'plot attribute "' + iCommand.values.attributeName + '" on graph';
+									break;
+							case 'legendAttributeChange':
+									theNewMomentTitle = 'plot attribute "' + iCommand.values.attributeName + '" on graph legend';
+									break;
+							case 'edit':
+									theNewMomentTitle = 'edit ' + iCommand.values.title;
+									break;
+							default:
+									if (iCommand.values.globalValue) {
+											theNewMomentTitle = "change slider";
+									} else {
+											theNewMomentTitle = iCommand.values.operation;
+									}
+					}
+					out.title = theNewMomentTitle;
+					return out;
+			}
+	*/
 
-    setNarrative(iText: string) {
-        this.narrative = iText;
-    }
+	setTitle(iTitle: string) {
+		this.title = iTitle;
+		//  this.setState({title:iTitle});
+	}
+
+	setMarker(iMarker: boolean) {
+		this.isMarker = iMarker;
+		//  this.setState({isMarker: iMarker});
+	}
+
+	setNarrative(iText: string) {
+		this.narrative = iText;
+	}
 }
 
 export function MomentView(props: any) {
-    let theClasses = " story-child marker";
-    if (props.isCurrent) theClasses += " current";
-    return (
-        <div id={"DSMarker" + props.id}
-             className={theClasses}
-             draggable
-             onDragStart={props.onDragStart}
-             onClick={props.onClick}
-             title={props.theText}
-        >
-            {props.theText}
-        </div>
-    );
+	let theClasses = " story-child marker";
+	if (props.isCurrent) theClasses += " current";
+	return (
+		<div id={"DSMarker" + props.id}
+				 className={theClasses}
+				 draggable
+				 onDragStart={props.onDragStart}
+				 onClick={props.onClick}
+				 title={props.theText}
+		>
+			{props.theText}
+		</div>
+	);
 }
