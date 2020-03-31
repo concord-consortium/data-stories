@@ -13,9 +13,9 @@ export class Timeline {
 	private nextMomentID: number = 0;
 	private momentBeingDragged: Moment | null = null;
 
-	/*
-			public currentCodapState: object | null = null;
-	*/
+    /*
+        public currentCodapState: object | null = null;
+    */
 
 	constructor(iParent: any) {
 		//  this.initializeToCodapState(null);
@@ -273,21 +273,25 @@ export class Timeline {
 		return tNewMoment;
 	}
 
-	/**
-	 * Set the narrative for the current index to the given text
-	 * which was captured by the plugin from the text object, in response
-	 * to an edit event.
-	 *
-	 * @param iString
-	 */
-	setNewNarrative(iText: string, iTitle: string): void {
-		let theMoment = this.currentMoment;
-		if (theMoment) {
+    /**
+     * Set the narrative for the current index to the given text
+     * which was captured by the plugin from the text object, in response
+     * to an edit event.
+     *
+     * @param iString
+     */
+    setNewNarrative(iString: string): void {
+        let theMoment = this.currentMoment;
+        if (theMoment) theMoment.setNarrative(iString);
+    }
+/*setNewNarrative(iText: string, iTitle: string): void {
+        let theMoment = this.currentMoment;
+        if (theMoment) {
             theMoment.setNarrative(iText);
             theMoment.setTitle(iTitle);
         }
 	}
-
+*/
 
 	/*
 			handleNotification(iCommand: any): void {

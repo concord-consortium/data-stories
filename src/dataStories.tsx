@@ -7,6 +7,8 @@ import './dataStories.css';
 
 import shutterImage from "./art/shutter.png";
 
+let gNarrativeBoxID: number = 0;        //  global
+
 const kPluginName = "Story Builder";
 const kInitialMarkerStartDelay = 1200;      //  milliseconds
 const kNarrativeTextBoxName = "narrative";
@@ -56,10 +58,12 @@ function makeInitialNarrativeTextBox(): void {
 					values: textBoxObject
 				};
 
-				codapInterface.sendRequest(theMessage);
-			}
-		}
-	);
+                const tResult : any =codapInterface.sendRequest(theMessage);if (tResult.success) {
+                    gNarrativeBoxID = tResult.values.id;
+                }
+            }
+        }
+    );
 }
 
 /**
@@ -200,14 +204,17 @@ class StoryArea extends Component<{callbackToAssignRestoreStateFunc:any}, { numN
      */
     private async handleNotification(iCommand: any): Promise<any> {
         if (iCommand.resource !== 'undoChangeNotice') {     //  ignore all of these
+
+            //  console.log(`  notification! ${iCommand.resource} op ${iCommand.values.operation}`);
+
             if (iCommand.values.operation === 'newDocumentState') {
                 if (this.waitingForDocumentState) {
                     this.receiveNewDocumentState(iCommand);
                 }
             } else {
                 if (iCommand.values.operation === 'edit') {
-                    console.log(`    edit notification on: ${iCommand.values.type} name ${iCommand.values.name}`);if (iCommand.values.type === "DG.TextView" &&
-                        iCommand.values.name === kNarrativeTextBoxName) {
+                    //  console.log(`    notification! edit ${JSON.stringify(iCommand.values)}`);if (iCommand.values.type === "DG.TextView" &&
+                        iCommand.values.title === kNarrativeTextBoxName) {      //  todo: better if it's .name!
 
 						//  we are notified of a change to the text in the "Narrative" text box
 
@@ -215,7 +222,6 @@ class StoryArea extends Component<{callbackToAssignRestoreStateFunc:any}, { numN
                         const theResult: any = await codapInterface.sendRequest(theMessage);
                         if (theResult.success) {
                             console.log(`    result successful`);const boxText = theResult.values.text;const boxTitle = theResult.values.title;
-/*
                             const separatorIndex = boxText.indexOf(kSeparatorString);
                             let narrativeIndex = 0;
                             if (separatorIndex > 0) {
@@ -230,12 +236,13 @@ class StoryArea extends Component<{callbackToAssignRestoreStateFunc:any}, { numN
 
                             }
                             const theNewNarrative = boxText.substring(narrativeIndex);
-                            console.log("Text get result is " + theNewNarrative);
+                            //  console.log("Text get result is " + theNewNarrative);
                             this.timeline.setNewNarrative(theNewNarrative.trim());
-                        */
-                    console.log(`    narrative title: ${boxTitle} text: ${boxText}`);
+/*
+                            console.log(`    narrative title: ${boxTitle} text: ${boxText}`);
                             this.timeline.setNewNarrative(boxText, boxTitle);
-                        }}
+                        */
+                    }}
                 }
 
 				//  this.timeline.handleNotification(iCommand);
@@ -334,9 +341,12 @@ class StoryArea extends Component<{callbackToAssignRestoreStateFunc:any}, { numN
         const textBoxObject = {
             type: "text",
             name: kNarrativeTextBoxName,
-            title: titleString ,
-            text: narrativeString,
-        };console.log(`    displayNarrative with ${JSON.stringify(textBoxObject)}`);
+            title: kNarrativeTextBoxName,
+            //title: titleString,
+            text: titleString + kSeparatorString +narrativeString,
+        };
+
+        //console.log(`    displayNarrative with ${JSON.stringify(textBoxObject)}`);
 
 		const theMessage = {
 			action: "update",
