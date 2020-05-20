@@ -209,41 +209,42 @@ class StoryArea extends Component<{callbackToAssignRestoreStateFunc:any}, { numN
 					if (this.waitingForDocumentState) {
 						this.receiveNewDocumentState(iCommand);
 					}
-				} else {
-					if (iCommand.values.operation === 'edit') {
-						//  console.log(`    notification! edit ${JSON.stringify(iCommand.values)}`);
-						if (iCommand.values.type === "DG.TextView" &&
-							iCommand.values.title === kNarrativeTextBoxName) {      //  todo: better if it's .name!
-							//  we are notified of a change to the text in the "Narrative" text box
-							const theMessage = {action: "get", resource: "component[" + kNarrativeTextBoxName + "]"};
-							const theResult: any = await codapInterface.sendRequest(theMessage);
-							if (theResult.success) {
-								console.log(`    result successful`);
-								const boxText = theResult.values.text;
-								const boxTitle = theResult.values.title;
-								const separatorIndex = boxText.indexOf(kSeparatorString);
-								let narrativeIndex = 0;
-								if (separatorIndex > 0) {
-									const theFocusMoment: Moment | null = this.timeline.currentMoment;
-									if (theFocusMoment !== null) {
-										narrativeIndex = separatorIndex + kSeparatorString.length;
-										const newTitle = boxText.substring(0, separatorIndex);
-										theFocusMoment.setTitle(newTitle.trim());
-										this.forceUpdate();     //  put the new title into the timeline
-									}
+				} else if (iCommand.values.operation === 'edit') {
+					//  console.log(`    notification! edit ${JSON.stringify(iCommand.values)}`);
+					if (iCommand.values.type === "DG.TextView" &&
+						iCommand.values.title === kNarrativeTextBoxName) {      //  todo: better if it's .name!
+						//  we are notified of a change to the text in the "Narrative" text box
+						const theMessage = {action: "get", resource: "component[" + kNarrativeTextBoxName + "]"};
+						const theResult: any = await codapInterface.sendRequest(theMessage);
+						if (theResult.success) {
+							console.log(`    result successful`);
+							const boxText = theResult.values.text;
+							const boxTitle = theResult.values.title;
+							const separatorIndex = boxText.indexOf(kSeparatorString);
+							let narrativeIndex = 0;
+							if (separatorIndex > 0) {
+								const theFocusMoment: Moment | null = this.timeline.currentMoment;
+								if (theFocusMoment !== null) {
+									narrativeIndex = separatorIndex + kSeparatorString.length;
+									const newTitle = boxText.substring(0, separatorIndex);
+									theFocusMoment.setTitle(newTitle.trim());
+									this.forceUpdate();     //  put the new title into the timeline
 								}
-								const theNewNarrative = boxText.substring(narrativeIndex);
-								//  console.log("Text get result is " + theNewNarrative);
-								this.timeline.setNewNarrative(theNewNarrative.trim());
-								/*
-																						console.log(`    narrative title: ${boxTitle} text: ${boxText}`);
-																						this.timeline.setNewNarrative(boxText, boxTitle);
-								*/
 							}
+							const theNewNarrative = boxText.substring(narrativeIndex);
+							//  console.log("Text get result is " + theNewNarrative);
+							this.timeline.setNewNarrative(theNewNarrative.trim());
+							/*
+																					console.log(`    narrative title: ${boxTitle} text: ${boxText}`);
+																					this.timeline.setNewNarrative(boxText, boxTitle);
+							*/
 						}
 					}
-					//  this.timeline.handleNotification(iCommand);
 				}
+				else if( iCommand.values.operation === 'titleChange') {
+
+				}
+				//  this.timeline.handleNotification(iCommand);
 			}
 		}
 
