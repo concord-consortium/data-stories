@@ -212,7 +212,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                 if (this.waitingForDocumentState) {
                     this.receiveNewDocumentState(iCommand);
                 }
-            } else {
+            } else
                 if (iCommand.values.operation === 'edit') {
                     console.log(`    notification! edit ${JSON.stringify(iCommand.values)}`);
                     if (iCommand.values.type === "DG.TextView" &&
@@ -245,10 +245,12 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                         }
                     }
                 }
-                //  this.timeline.handleNotification(iCommand);
+                else if( iCommand.values.operation === 'titleChange') {
+
+				}//  this.timeline.handleNotification(iCommand);
             }
         }
-    }
+
 
 
     private restoreCodapStateFromMoment(iMoment: Moment | null) {
