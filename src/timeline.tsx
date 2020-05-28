@@ -253,7 +253,7 @@ export class Timeline {
 	 * @param iCodapState
 	 */
 	makeMarkerOnDemand(iCodapState: any): Moment {
-		if (!this.initialCodapState) {
+		if (!this.initialCodapState) {		//		is this the first marker? A new state?
 			this.moments = [];      //  blank the moment array
 			this.initialCodapState = iCodapState;
 		}
