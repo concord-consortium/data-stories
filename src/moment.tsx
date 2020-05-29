@@ -45,15 +45,20 @@ export class Moment {
 
 	}
 
+	toString() : string {
+		return `ID: ${this.ID} title: ${this.title} narrative: ${this.narrative}`;
+	}
+
+	setCodapState(iCodapState: object) {
+		this.codapState = iCodapState;
+	}
 
 	setTitle(iTitle: string) {
 		this.title = iTitle;
-		//  this.setState({title:iTitle});
 	}
 
 	setMarker(iMarker: boolean) {
 		this.isMarker = iMarker;
-		//  this.setState({isMarker: iMarker});
 	}
 
 	setNarrative(iText: string) {

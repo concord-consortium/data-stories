@@ -6,6 +6,7 @@ import {MomentView, Moment} from './moment';
 import './dataStories.css';
 
 import shutterImage from "./art/shutter.png";
+import {isMainThread} from "worker_threads";
 
 let gNarrativeBoxID: number = 0;        //  global
 
@@ -52,7 +53,7 @@ async function makeInitialNarrativeTextBox(): Promise<void> {
         const textBoxObject = {
             type: "text",
             name: kNarrativeTextBoxName,
-			title: kNarrativeTextBoxTitle,
+            title: kNarrativeTextBoxTitle,
             cannotClose: true,
             text: "This is the narrative for the beginning of your data story."
         };
@@ -152,6 +153,16 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
     }
 
     /**
+     * invoked when the user presses the "shutter" button.
+     * In order to make a marker, we must get the current CODAP state.
+     * We actually receive the state in handleNotification(). This just makes the request.
+     */
+    public startMakingMarker(): void {
+        this.requestDocumentState();
+        this.makingMarker = true;
+    }
+
+    /**
      * We ask for the document state using a get-document request.
      * But the result cannot come back, even with _await_.
      * So we set a flag which gets unset in a partner method, `receiveNewDocumentState`.
@@ -175,28 +186,51 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         }
     }
 
-    /**
-     * invoked when the user presses the "shutter" button.
-     * In order to make a marker, we must get the current CODAP state.
-     * We actually receive the state in handleNotification(). This just makes the request.
-     */
-    public startMakingMarker(): void {
-        this.requestDocumentState();
-        this.makingMarker = true;
-    }
 
     /**
      * A new codapState has arrived, so we can ask the timeline to make the marker. Finally.
      * @param iCodapState
      */
-    public finishMakingMarker(iCodapState: any): void {
+    public async finishMakingMarker(iCodapState: any): Promise<void> {
+
+        //  fist, we set the current moment to have the current state
+        //  currentMoment may be null...if we have just begun
+        this.updateMoment(this.timeline.currentMoment, iCodapState);
+
+        //  now we set the NEXT moment, the under-construction one, to have the current state as well.
         const tMoment = this.timeline.makeMarkerOnDemand(iCodapState);
-        StoryArea.displayNarrativeInTextBox(tMoment);
+        await StoryArea.displayNarrativeInTextBox(tMoment);
 
         this.makingMarker = false;
         this.forceUpdate();
     }
 
+    /**
+     * The user has called for a new marker, so we update the old one to reflect the
+     * current document state.
+     *
+     * @param iMoment
+     * @param iState
+     */
+    private async updateMoment(iMoment : Moment | null, iState : object) : Promise<void> {
+        if (iMoment instanceof Moment) {
+            console.log(`iMoment before update: ${iMoment.toString()}`)
+            iMoment.setCodapState(iState);
+            iMoment.created = new Date();
+            //  the name is constant and will not change
+
+            const tMessage = {action: "get", resource: `component[${kNarrativeTextBoxName}]`};
+            const tResult: any = await codapInterface.sendRequest(tMessage);
+            if (tResult.success) {
+                iMoment.setTitle(tResult.values.title);
+                iMoment.setNarrative(tResult.values.text);
+                console.log(`Got text from ${tResult.values.title} to update the moment: ${tResult.values.text}`);
+            }
+            console.log(`iMoment after update: ${iMoment.toString()}`)
+        } else {
+            console.log(`Hmmm. Tried to update a non-Moment in updateMoment(): ${JSON.stringify(iMoment)}`)
+        }
+    }
 
     /**
      * Responsible for handling the various notifications we receive
@@ -212,45 +246,45 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                 if (this.waitingForDocumentState) {
                     this.receiveNewDocumentState(iCommand);
                 }
-            } else
-                if (iCommand.values.operation === 'edit') {
-                    console.log(`    notification! edit ${JSON.stringify(iCommand.values)}`);
-                    if (iCommand.values.type === "DG.TextView" &&
-                        iCommand.values.name === kNarrativeTextBoxName) {
-                        //  we are notified of a change to the text in the "Narrative" text box
-                        const theMessage = {action: "get", resource: "component[" + kNarrativeTextBoxName + "]"};
-                        const theResult: any = await codapInterface.sendRequest(theMessage);
-                        if (theResult.success) {
-                            console.log(`    result successful`);
-                            const boxText = theResult.values.text;
-                            const boxTitle = theResult.values.title;
-                            const separatorIndex = boxText.indexOf(kSeparatorString);
-                            let narrativeIndex = 0;
-                            if (separatorIndex > 0) {
-                                const theFocusMoment: Moment | null = this.timeline.currentMoment;
-                                if (theFocusMoment !== null) {
-                                    narrativeIndex = separatorIndex + kSeparatorString.length;
-                                    const newTitle = boxText.substring(0, separatorIndex);
-                                    theFocusMoment.setTitle(newTitle.trim());
-                                    this.forceUpdate();     //  put the new title into the timeline
-                                }
+            } else if (iCommand.values.operation === 'titleChange') {
+                const textBoxComponentResourceString = `component[${gNarrativeBoxID}]`;
+                if (iCommand.resource === textBoxComponentResourceString) {
+                    console.log(`TITLE changed to "${iCommand.values.to}"`);
+                    this.timeline.setNewTitle(iCommand.values.to);
+                    this.forceUpdate();
+                }
+            } else if (iCommand.values.operation === 'edit') {
+                console.log(`    edit notification! edit ${JSON.stringify(iCommand.values)}`);
+/*
+                if (iCommand.values.type === "DG.TextView" &&
+                    iCommand.values.name === kNarrativeTextBoxName) {
+                    //  we are notified of a change to the text in the "Narrative" text box
+                    const theMessage = {action: "get", resource: "component[" + kNarrativeTextBoxName + "]"};
+                    const theResult: any = await codapInterface.sendRequest(theMessage);
+                    if (theResult.success) {
+                        console.log(`    result successful`);
+                        const boxText = theResult.values.text;
+                        const boxTitle = theResult.values.title;
+                        const separatorIndex = boxText.indexOf(kSeparatorString);
+                        let narrativeIndex = 0;
+                        if (separatorIndex > 0) {
+                            const theFocusMoment: Moment | null = this.timeline.currentMoment;
+                            if (theFocusMoment !== null) {
+                                narrativeIndex = separatorIndex + kSeparatorString.length;
+                                const newTitle = boxText.substring(0, separatorIndex);
+                                theFocusMoment.setTitle(newTitle.trim());
+                                this.forceUpdate();     //  put the new title into the timeline
                             }
-                            const theNewNarrative = boxText.substring(narrativeIndex);
-                            //  console.log("Text get result is " + theNewNarrative);
-                            this.timeline.setNewNarrative(theNewNarrative.trim());
-                            /*
-                                                                                    console.log(`    narrative title: ${boxTitle} text: ${boxText}`);
-                                                                                    this.timeline.setNewNarrative(boxText, boxTitle);
-                            */
                         }
+                        const theNewNarrative = boxText.substring(narrativeIndex);
+                        //  console.log("Text get result is " + theNewNarrative);
+                        this.timeline.setNewNarrative(theNewNarrative.trim());
                     }
                 }
-                else if( iCommand.values.operation === 'titleChange') {
-
-				}//  this.timeline.handleNotification(iCommand);
+*/
             }
         }
-
+    }
 
 
     private restoreCodapStateFromMoment(iMoment: Moment | null) {
@@ -283,16 +317,16 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
     /**
      * Handles a user click on a moment in the timeline.
      *
-     * @param e     the mouse event
+     * @param   e     the mouse event
      * @param iMoment   the moment (set in the original onClick)
      */
-    public async onMomentClick(e: MouseEvent, iMoment: Moment) {
+    public async handleMomentClick(e: MouseEvent, iMoment: Moment) {
         //  if there is an actual moment, do the time-travel using `restoreCodapState`.
         if (iMoment) {
             this.timeline.handleMomentClick(iMoment);
             await this.restoreCodapStateFromMoment(iMoment);
             this.forceUpdate();
-            StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
+            //  StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
         }
     }
 
@@ -334,20 +368,18 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
     private static async displayNarrativeInTextBox(iMoment: Moment | null): Promise<void> {
         let momentTitleString, narrativeString;
         if (iMoment) {
-			momentTitleString = iMoment.title;
+            momentTitleString = iMoment.title;
             narrativeString = iMoment.narrative;
         } else {
-			momentTitleString = "No moments!";
+            momentTitleString = "No moments!";
             narrativeString = "Press the shutter to save a Moment in the Story Builder.";
         }
         const textBoxObject = {
             type: "text",
             name: kNarrativeTextBoxName,
             title: momentTitleString,
-            text: momentTitleString + kSeparatorString + narrativeString,
+            text: narrativeString,
         };
-
-        console.log(`    displayNarrative with ${JSON.stringify(textBoxObject)}`);
 
         const theMessage = {
             action: "update",
@@ -355,12 +387,12 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
             values: textBoxObject
         };
 
-        console.log(`...narrative display in moment [${momentTitleString}]: ${narrativeString}`);
+        // console.log(`...displayNarrativeInTextBox() in moment [${momentTitleString}]: ${narrativeString}`);
 
-        const tResult : any = await codapInterface.sendRequest(theMessage);
+        const tResult: any = await codapInterface.sendRequest(theMessage);
         if (tResult.success) {
-			console.log(`...successful update`);
-		}
+            //  console.log(`...successfully updated the text box`);
+        }
     }
 
     /**
@@ -450,7 +482,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                             (e: React.DragEvent) =>
                                 this_.timeline.handleDragStart(e, aMoment)
                         }
-                        onClick={(e: MouseEvent) => this_.onMomentClick(e, aMoment)}
+                        onClick={(e: MouseEvent) => this_.handleMomentClick(e, aMoment)}
                         isCurrent={aMoment === this_.timeline.currentMoment}
                         theText={aMoment.title}
                         isMarker={aMoment.isMarker}

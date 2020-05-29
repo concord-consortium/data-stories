@@ -13,6 +13,19 @@ export class Timeline {
 	private nextMomentID: number = 0;
 	private momentBeingDragged: Moment | null = null;
 
+	private kDefaultNarrative : string = `What did you do? Why did you do it?\n¿Qué hizo? ¿Por qué?`;
+	private kDefaultNarrativeAsJSON : object = {
+		object:"value",
+		document:{
+			children:[
+				{type:"paragraph",
+				children:[
+					{text:"What did you do? Why did you do it?"}
+					]},
+				{type:"paragraph",
+					children:[{"text":"¿Qué hizo? ¿Por qué?"}]}],
+			"objTypes":{"paragraph":"block"}}};
+
     /*
         public currentCodapState: object | null = null;
     */
@@ -96,13 +109,6 @@ export class Timeline {
 	 */
 	handleMomentClick(iMoment: Moment | null): Moment | null {
 		this.currentMoment = iMoment;
-		/*
-
-						if (this.isMoment(iMoment)) {
-								return iMoment;
-						}
-						return null;
-		*/
 		return iMoment;
 	}
 
@@ -248,6 +254,8 @@ export class Timeline {
 
 	/**
 	 * Create a marker, given a current CODAP state.
+	 * Adds the moment to the array.
+	 * Makes it the currentMoment.
 	 * return a Moment based on that state.
 	 *
 	 * @param iCodapState
@@ -269,7 +277,7 @@ export class Timeline {
 		tNewMoment.setMarker(true);
 
 		tNewMoment.title = (tNewMoment.ID === 0) ? "start/comienzo" : "Moment " + tNewMoment.ID;
-		tNewMoment.narrative = "What did you do? Why did you do it?\n¿Qué hizo? ¿Por qué?";
+		tNewMoment.narrative = this.kDefaultNarrative;
 		return tNewMoment;
 	}
 
@@ -284,15 +292,11 @@ export class Timeline {
         let theMoment = this.currentMoment;
         if (theMoment) theMoment.setNarrative(iString);
     }
-/*setNewNarrative(iText: string, iTitle: string): void {
-        let theMoment = this.currentMoment;
-        if (theMoment) {
-            theMoment.setNarrative(iText);
-            theMoment.setTitle(iTitle);
-        }
-	}
-*/
 
+    setNewTitle(iTitle : string): void {
+		let theMoment = this.currentMoment;
+		if (theMoment) theMoment.setTitle(iTitle);
+	}
 	/*
 			handleNotification(iCommand: any): void {
 
