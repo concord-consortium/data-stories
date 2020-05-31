@@ -107,3 +107,16 @@
 .container-drag {
     background-color: #def;
 }
+
+#updateButton, #revertButton {
+    font-size: small;
+}
+.userChoiceDialog {
+    position: fixed;
+    display: block;
+    top: 100px;
+    left: 100px;
+    margin: 1em;
+    height: 200px;
+    width: 200px;
+}

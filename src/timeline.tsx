@@ -5,7 +5,6 @@ import React, {Component} from 'react';
 
 export class Timeline {
 	private moments: Moment[] = [];
-//    private notificationInWaiting: object | null = null;
 	public currentMoment: Moment | null = null;
 	public startingMoment: Moment | null = null;
 	private parent: any;
@@ -13,7 +12,8 @@ export class Timeline {
 	private nextMomentID: number = 0;
 	private momentBeingDragged: Moment | null = null;
 
-	private kDefaultNarrative : string = `What did you do? Why did you do it?\n¿Qué hizo? ¿Por qué?`;
+	private kDefaultNarrative : string = `What did you do? Why did you do it? ... ¿Qué hizo? ¿Por qué?`;
+/*
 	private kDefaultNarrativeAsJSON : object = {
 		object:"value",
 		document:{
@@ -25,16 +25,17 @@ export class Timeline {
 				{type:"paragraph",
 					children:[{"text":"¿Qué hizo? ¿Por qué?"}]}],
 			"objTypes":{"paragraph":"block"}}};
-
-    /*
-        public currentCodapState: object | null = null;
-    */
+*/
 
 	constructor(iParent: any) {
 		//  this.initializeToCodapState(null);
 		this.parent = iParent;
 	}
 
+	getCurrentMomentTitle() : string {
+		let out = (this.currentMoment) ? this.currentMoment.title : "";
+		return out;
+	}
 	/*
 			isMoment(m: Moment | undefined): m is Moment {
 					return (m as Moment).codapState !== undefined;
@@ -165,6 +166,7 @@ export class Timeline {
 		return returnValue;
 	}
 
+
 	/**
 	 * Remove the given moment from the prev-next stream in the moments array
 	 * Note: this does not remove the moment from the array;
@@ -276,7 +278,7 @@ export class Timeline {
 		this.currentMoment = tNewMoment;
 		tNewMoment.setMarker(true);
 
-		tNewMoment.title = (tNewMoment.ID === 0) ? "start/comienzo" : "Moment " + tNewMoment.ID;
+		tNewMoment.title = (tNewMoment.ID === 0) ? "start ... comienzo" : "Moment " + tNewMoment.ID;
 		tNewMoment.narrative = this.kDefaultNarrative;
 		return tNewMoment;
 	}
@@ -297,21 +299,5 @@ export class Timeline {
 		let theMoment = this.currentMoment;
 		if (theMoment) theMoment.setTitle(iTitle);
 	}
-	/*
-			handleNotification(iCommand: any): void {
 
-			}
-	*/
-
-	/**
-	 * Used for debugging. Shows the types of components in the given State
-	 * @param iState
-	 */
-	/*
-			stateInfoString(iState: any) {
-					const theComponents: any = iState["components"];
-					const compArray = theComponents.map((el: any) => el.type);
-					return compArray.join(" ");
-			}
-	*/
 }

@@ -3,21 +3,26 @@ import codapInterface from "./lib/CodapInterface";
 import {initializePlugin} from './lib/codap-helper';
 import {Timeline} from './timeline';
 import {MomentView, Moment} from './moment';
+//  import Swal from 'sweetalert2';
 import './dataStories.css';
 
 import shutterImage from "./art/shutter.png";
 import {isMainThread} from "worker_threads";
 
 let gNarrativeBoxID: number = 0;        //  global
+let gChangeCount = 0;
 
 const kPluginName = "Story Builder";
 const kInitialMarkerStartDelay = 1200;      //  milliseconds
 const kNarrativeTextBoxName = "WDS-narrative-box";
 const kNarrativeTextBoxTitle = "narrative";
+const kNarrativeTextBoxInitialContents = "This is the beginning of your data story ... Esto es el comienzo de su cuento de datos";
 const kMagnifyingGlass = "\ud83d\udd0d";
 const kCheckmark = "\u2714";
 const kTrashCan = "\uD83D\uddd1";
 const kSeparatorString = "\n\n";
+const kSave = "save";
+const kRevert = "rev";
 
 const kVersion = "0.2";
 const kInitialWideDimensions = {
@@ -39,6 +44,21 @@ function Credits(props: any) {
     )
 }
 
+function getNarrativeBoxInfoFromCodapState(iState : any) : object {
+    const theComponents = iState.components;
+    let theComponentStorage : any = null;
+    theComponents.forEach( (comp : any)  => {
+        if (comp.type === "DG.TextView" && comp.componentStorage.name === kNarrativeTextBoxName) {
+            theComponentStorage = comp.componentStorage;
+        }
+    });
+
+    return {
+        narrative : theComponentStorage.text,
+        title : theComponentStorage.title,
+    }
+}
+
 /**
  * If necessary, create a text component to hold information about the
  * current marker's Moment, principally any narrative text the student has written.
@@ -50,17 +70,16 @@ async function makeInitialNarrativeTextBox(): Promise<void> {
     const tNeed: boolean = await needNarrativeTextBox();
 
     if (tNeed) {
-        const textBoxObject = {
-            type: "text",
-            name: kNarrativeTextBoxName,
-            title: kNarrativeTextBoxTitle,
-            cannotClose: true,
-            text: "This is the narrative for the beginning of your data story."
-        };
         const theMessage = {
             action: "create",
             resource: "component",
-            values: textBoxObject
+            values: {
+                type: "text",
+                name: kNarrativeTextBoxName,
+                title: kNarrativeTextBoxTitle,
+                cannotClose: true,
+                text: kNarrativeTextBoxInitialContents,
+            }
         };
 
         const tResult: any = await codapInterface.sendRequest(theMessage);
@@ -69,6 +88,11 @@ async function makeInitialNarrativeTextBox(): Promise<void> {
             console.log(`Text box id ${gNarrativeBoxID} created.`);
         }
     }
+}
+
+function resetChangeCount() : void {
+    console.log(`RESET: change count from ${gChangeCount} to 0`);
+    gChangeCount = 0;
 }
 
 /**
@@ -100,6 +124,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
     private restoreInProgress = false;
     private waitingForDocumentState = false;
     private makingMarker = false;
+    private updatingMoment = false;
 
     constructor(props: any) {
         super(props);
@@ -109,6 +134,8 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         this.handleNotification = this.handleNotification.bind(this);
         this.changeStoryMode = this.changeStoryMode.bind(this);
         this.handleDeleteCurrentMoment = this.handleDeleteCurrentMoment.bind(this);
+        this.handleUpdateCurrentMoment = this.handleUpdateCurrentMoment.bind(this);
+        this.handleRevertCurrentMoment = this.handleRevertCurrentMoment.bind(this);
         this.startMakingMarker = this.startMakingMarker.bind(this);
         this.getPluginState = this.getPluginState.bind(this);
         this.restorePluginState = this.restorePluginState.bind(this);
@@ -130,6 +157,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
             }
         }, kInitialMarkerStartDelay);
 
+        //  Swal.fire('Hello, Tim!');
         console.log("Initial clear() completed. Initial mode is " + this.state.storyMode);
     }
 
@@ -158,6 +186,14 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
      * We actually receive the state in handleNotification(). This just makes the request.
      */
     public startMakingMarker(): void {
+        if (gChangeCount > 0) {
+            const tConfirmMessage =
+                `You have ${gChangeCount} change${gChangeCount === 1 ? "" : "s"}. ` +
+                `Would you like to save ${gChangeCount === 1 ? "it" : "them"} in ${this.timeline.getCurrentMomentTitle()}?`;
+            if (window.confirm(tConfirmMessage)) {
+
+            }
+        }
         this.requestDocumentState();
         this.makingMarker = true;
     }
@@ -182,6 +218,9 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
             this.waitingForDocumentState = false;
             if (this.makingMarker) {
                 this.finishMakingMarker(iCommand.values.state);
+            } else if (this.updatingMoment) {
+                this.updateMomentWithCodapState(this.timeline.currentMoment, iCommand.values.state);
+                this.updatingMoment = false;
             }
         }
     }
@@ -195,7 +234,9 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
 
         //  fist, we set the current moment to have the current state
         //  currentMoment may be null...if we have just begun
-        this.updateMoment(this.timeline.currentMoment, iCodapState);
+        if (this.timeline.currentMoment) {
+            this.updateMomentWithCodapState(this.timeline.currentMoment, iCodapState);
+        }
 
         //  now we set the NEXT moment, the under-construction one, to have the current state as well.
         const tMoment = this.timeline.makeMarkerOnDemand(iCodapState);
@@ -203,29 +244,36 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
 
         this.makingMarker = false;
         this.forceUpdate();
+        resetChangeCount();
     }
 
     /**
-     * The user has called for a new marker, so we update the old one to reflect the
-     * current document state.
+     * Utility to update the given moment with the given state.
      *
      * @param iMoment
      * @param iState
      */
-    private async updateMoment(iMoment : Moment | null, iState : object) : Promise<void> {
+    private async updateMomentWithCodapState(iMoment : Moment | null, iState : object) : Promise<void> {
         if (iMoment instanceof Moment) {
             console.log(`iMoment before update: ${iMoment.toString()}`)
             iMoment.setCodapState(iState);
             iMoment.created = new Date();
-            //  the name is constant and will not change
 
+            const tTextBoxInfo : any = getNarrativeBoxInfoFromCodapState(iState);
+            iMoment.setTitle( tTextBoxInfo.title );
+            iMoment.setNarrative( tTextBoxInfo.narrative );
+
+/*
             const tMessage = {action: "get", resource: `component[${kNarrativeTextBoxName}]`};
             const tResult: any = await codapInterface.sendRequest(tMessage);
+*/
+/*
             if (tResult.success) {
                 iMoment.setTitle(tResult.values.title);
                 iMoment.setNarrative(tResult.values.text);
                 console.log(`Got text from ${tResult.values.title} to update the moment: ${tResult.values.text}`);
             }
+*/
             console.log(`iMoment after update: ${iMoment.toString()}`)
         } else {
             console.log(`Hmmm. Tried to update a non-Moment in updateMoment(): ${JSON.stringify(iMoment)}`)
@@ -240,7 +288,10 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
      * @param iCommand    the Command resulting from the user action
      */
     private async handleNotification(iCommand: any): Promise<any> {
-        if (iCommand.resource !== 'undoChangeNotice') {     //  ignore all of these
+        if (iCommand.resource === 'undoChangeNotice') {     //  ignore all of these
+            gChangeCount++;
+            console.log(`change count: ${gChangeCount}`);
+        } else {
             console.log(`  notification! ${iCommand.resource} op ${iCommand.values.operation}`);
             if (iCommand.values.operation === 'newDocumentState') {
                 if (this.waitingForDocumentState) {
@@ -290,12 +341,13 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
     private restoreCodapStateFromMoment(iMoment: Moment | null) {
         const newState = (iMoment) ? iMoment.codapState : null;
         this.restoreCodapState(newState);
+
     }
 
     /**
      * Asks CODAP to restore itself to the given state.
      * Note: sets restoreInProgress while it's running and resolving its promises
-     *
+     * todo: should this be async?
      * @param iCodapState    the state to restore to; this is the potentially large JSON object
      */
     private restoreCodapState(iCodapState: object | null): any {
@@ -309,8 +361,10 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                 values: iCodapState
             }).then(() => {
                 this_.restoreInProgress = false;
+                resetChangeCount();
             });
         }
+
         return out;
     }
 
@@ -337,7 +391,20 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         this.timeline.removeCurrentMoment();    //  also sets a new currentMoment
         this.restoreCodapStateFromMoment(this.timeline.currentMoment);
         this.forceUpdate();     //  remove the marker from the bar, point at the current one
-        StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
+        //  StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
+    }
+
+    private handleRevertCurrentMoment(): void {
+        this.restoreCodapStateFromMoment(this.timeline.currentMoment);
+
+        //  this.forceUpdate();     //  in case there's any change
+    }
+
+    private handleUpdateCurrentMoment(): void {
+        this.updatingMoment = true;
+        this.requestDocumentState();
+
+        //  this.forceUpdate();     //  in case there's any change
     }
 
     private handleDrop(e: React.DragEvent) {
@@ -348,8 +415,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         this.timeline.handleDrop(e.clientX);
         console.log("drop at x = " + currentX);
         this.restoreCodapStateFromMoment(this.timeline.currentMoment);
-        StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
-
+        //  StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
     }
 
     private static handleDragOver(e: React.DragEvent) {
@@ -424,6 +490,12 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         it's not part of the list of moments or the editing controls for a particular moment.
         */
 
+        const modelDialog = (
+            <div className="userChoiceDialog">
+                This is our dialog
+            </div>
+        );
+
         const focusButtonGuts = (this.state.storyMode === "scrubber") ? kMagnifyingGlass : "back to timeline";
         const scrubberControlArea = (
             <div id="controlArea" className="control-area">
@@ -434,6 +506,24 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                      title={"press to delete the current moment"}
                 >
                     {kTrashCan}
+                </div>
+
+                {/*   revert button */}
+                <div id="updateButton"
+                     className="story-child tool icon-button"
+                     onClick={this.handleRevertCurrentMoment}
+                     title={"press to update the current moment"}
+                >
+                    {kRevert}
+                </div>
+
+                {/*   update button */}
+                <div id="updateButton"
+                     className="story-child tool icon-button"
+                     onClick={this.handleUpdateCurrentMoment}
+                     title={"press to update the current moment"}
+                >
+                    {kSave}
                 </div>
 
                 {/*		this is the shutter button, for making a new marker		*/}
@@ -616,7 +706,7 @@ class DataStories
             codapInterface.sendRequest(getComponentListMessage).then(
                 (tResult: any) => {
                     const listResult = tResult.values;
-                    console.log('components: ' + JSON.stringify(listResult));
+                    //  console.log('components: ' + JSON.stringify(listResult));
                     let thePluginID = null;
                     listResult.forEach((c: any) => {
                         if (c.title === kPluginName) {
@@ -630,7 +720,7 @@ class DataStories
                         'resource': 'component[' + thePluginID + ']',
                         'values': {'position': positionValues, 'cannotClose': true}
                     };
-                    console.log('trying to adjust the plugin with ' + JSON.stringify(adjustPluginMessage));
+                    //  console.log('trying to adjust the plugin with ' + JSON.stringify(adjustPluginMessage));
                     codapInterface.sendRequest(adjustPluginMessage).then(
                         (res) => {
                             console.log('Adjust plugin result: ' + JSON.stringify(res));
