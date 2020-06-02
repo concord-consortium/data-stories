@@ -18,7 +18,6 @@ export class Moment {
 	public title: string = "";
 	public created: Date;
 	public narrative: any = "";
-	public	everSaved : boolean = false;
 
 	constructor(iState: any) {
 		this.codapState = iState;

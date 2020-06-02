@@ -304,7 +304,6 @@ export class Timeline {
         this.moments.forEach(m => {
             out += `m ${m.ID} `
                 + ((m === this.currentMoment) ? "*" : " ")
-                + (m.everSaved ? " s+ " : " s- ")
                 + `[${m.title}]`
                 + "\n";
         });

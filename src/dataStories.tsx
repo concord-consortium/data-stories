@@ -125,8 +125,6 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
     private waitingForDocumentState = false;
     private saveStateInSrcMoment = false;
     private saveStateInDstMoment = false;
-    private updatingMoment = false;
-    private changeMode = "none";    //  none, new. travel
 
     constructor(props: any) {
         super(props);
@@ -194,8 +192,8 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         //      at this point, `tMoment.codapState` is still null.
 
         this.timeline.currentMoment = tMoment;
-        this.doBeginChangeToNewMoment(tMoment);
-        this.forceUpdate();
+        //  this.doBeginChangeToNewMoment(tMoment);
+        this.forceUpdate();     //  make the moment appear on the screen in the bar
     }
 
     componentWillMount() {
@@ -223,10 +221,8 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
             this.timeline.srcMoment = this.timeline.currentMoment;
 
             if (iMoment) {  //  a destination moment already exists
-                this.changeMode = "travel";
                 this.timeline.dstMoment = iMoment;
             } else {        //  we are making a new moment
-                this.changeMode = "new";
                 this.timeline.dstMoment = this.timeline.makeNewMomentUsingCodapState(null);
                 //  it is not yet the current moment
             }
@@ -238,26 +234,33 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                 `Would you like to save ${gChangeCount === 1 ? "it" : "them"} in ${this.timeline.getCurrentMomentTitle()}?`;
             const qChangesStayOnScreen = `Stay on screen?`;
 
-            if (!this.timeline.srcMoment.codapState) {
-                this.saveStateInSrcMoment = true;
+            this.saveStateInSrcMoment = false;
+            this.saveStateInDstMoment = false;
 
-                this.requestDocumentState();
-            } else if (!this.timeline.currentMoment.everSaved) {
-                this.requestDocumentState();
+            if (!this.timeline.srcMoment.codapState) {
+                //  whenever you're going from a "new" moment, you must save its state.
+                //  this is a convenience; we could ask.
+                this.saveStateInSrcMoment = true;
             } else if (gChangeCount === 0) {
-                this.doEndChangeToNewMoment();
+                //  no changes? We'll effectively save, but we won't ask.
+                this.saveStateInSrcMoment = true;       //  could be false..shouldn't matter, right?
             } else if (window.confirm(qSaveChanges)) {
-                this.requestDocumentState();
-            } else if (this.changeMode === "new"
+                //  there have been changes, so we will save.
+                this.saveStateInSrcMoment = true;
+            } else if (!this.timeline.dstMoment.codapState
                 && window.confirm(qChangesStayOnScreen)) {
-                this.doEndChangeToNewMoment();
+                //  so we're NOT saving changes in the source, but do we want them in the destination
+                this.saveStateInDstMoment = true;
             } else {
-                this.handleRevertCurrentMoment();
-                this.doEndChangeToNewMoment();
+                //  we don't want to save the srcMoment. Nor in the dst.
             }
+
+            this.requestDocumentState();
+
         } else {
             alert("Hmmm. timeline.currentMoment is not set.");
         }
+
     }
 
     /**
@@ -278,26 +281,23 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
     private receiveNewDocumentState(iCommand: any): void {
         if (this.waitingForDocumentState) {
             this.waitingForDocumentState = false;
-            this.matchMomentToCODAPState(this.timeline.currentMoment, iCommand.values.state);
+            if (this.saveStateInSrcMoment) {
+                this.matchMomentToCODAPState(this.timeline.srcMoment, iCommand.values.state);
+            }
+            if (this.saveStateInDstMoment) {
+                this.matchMomentToCODAPState(this.timeline.dstMoment, iCommand.values.state);
+            }
             this.doEndChangeToNewMoment();
         }
     }
 
     private async doEndChangeToNewMoment(): Promise<void> {
-        if (this.timeline.dstMoment && this.timeline.currentMoment) {
-            if (!this.timeline.dstMoment.codapState) {
-                this.matchMomentToCODAPState(this.timeline.dstMoment, this.timeline.currentMoment.codapState);
-            }
-        }
+
         this.timeline.currentMoment = this.timeline.dstMoment;
-        this.timeline.dstMoment = null;
-        if (this.changeMode === "travel") {
-            await this.matchCODAPStateToMoment(this.timeline.currentMoment);
-        }
-        if (this.changeMode === "new") {
-            await StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
-        }
-        this.changeMode = "none";
+
+        await this.matchCODAPStateToMoment(this.timeline.currentMoment);
+        await StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
+
         this.forceUpdate();
         console.log(this.timeline.getMomentSummary());
     }
@@ -316,29 +316,6 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
     }
 
 
-    /*
-        /!**
-         * A new codapState has arrived, so we can ask the timeline to make the marker. Finally.
-         * @param iCodapState
-         *!/
-        public async finishMakingMarker(iCodapState: any): Promise<void> {
-
-            //  fist, we set the current moment to have the current state
-            //  currentMoment may be null...if we have just begun
-            if (this.timeline.currentMoment) {
-                this.matchMomentToCODAPState(this.timeline.currentMoment, iCodapState);
-            }
-
-            //  now we set the NEXT moment, the under-construction one, to have the current state as well.
-            const tMoment = this.timeline.makeNewMomentUsingCodapState(iCodapState);
-            await StoryArea.displayNarrativeInTextBox(tMoment);
-
-            this.makingMarker = false;
-            this.forceUpdate();
-            resetChangeCount();
-        }
-    */
-
     /**
      * Utility to update the given moment with the given state.
      *
@@ -350,8 +327,6 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
             console.log(`iMoment before update: ${iMoment.toString()}`)
             iMoment.setCodapState(iState);
             iMoment.created = new Date();
-            iMoment.everSaved = true;
-
 
             const tTextBoxInfo: any = getNarrativeBoxInfoFromCodapState(iState);
             iMoment.setTitle(tTextBoxInfo.title);
@@ -390,33 +365,6 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                 }
             } else if (iCommand.values.operation === 'edit') {
                 console.log(`    edit notification! edit ${JSON.stringify(iCommand.values)}`);
-                /*
-                                if (iCommand.values.type === "DG.TextView" &&
-                                    iCommand.values.name === kNarrativeTextBoxName) {
-                                    //  we are notified of a change to the text in the "Narrative" text box
-                                    const theMessage = {action: "get", resource: "component[" + kNarrativeTextBoxName + "]"};
-                                    const theResult: any = await codapInterface.sendRequest(theMessage);
-                                    if (theResult.success) {
-                                        console.log(`    result successful`);
-                                        const boxText = theResult.values.text;
-                                        const boxTitle = theResult.values.title;
-                                        const separatorIndex = boxText.indexOf(kSeparatorString);
-                                        let narrativeIndex = 0;
-                                        if (separatorIndex > 0) {
-                                            const theFocusMoment: Moment | null = this.timeline.currentMoment;
-                                            if (theFocusMoment !== null) {
-                                                narrativeIndex = separatorIndex + kSeparatorString.length;
-                                                const newTitle = boxText.substring(0, separatorIndex);
-                                                theFocusMoment.setTitle(newTitle.trim());
-                                                this.forceUpdate();     //  put the new title into the timeline
-                                            }
-                                        }
-                                        const theNewNarrative = boxText.substring(narrativeIndex);
-                                        //  console.log("Text get result is " + theNewNarrative);
-                                        this.timeline.setNewNarrative(theNewNarrative.trim());
-                                    }
-                                }
-                */
             }
         }
     }
@@ -489,8 +437,14 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
      * its codapState matches the document)
      */
     private handleUpdateCurrentMoment(): void {
-        this.updatingMoment = true;
-        this.requestDocumentState();
+        if (this.timeline.currentMoment) {
+            this.saveStateInSrcMoment = true;
+            this.saveStateInDstMoment = true;
+            this.timeline.srcMoment = this.timeline.currentMoment;
+            this.timeline.dstMoment = this.timeline.currentMoment;
+
+            this.requestDocumentState();
+        }
     }
 
     private handleDrop(e: React.DragEvent) {
