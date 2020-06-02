@@ -17,7 +17,8 @@ export class Moment {
 	public isMarker: boolean = false;
 	public title: string = "";
 	public created: Date;
-	public narrative: string = "";
+	public narrative: any = "";
+	public	everSaved : boolean = false;
 
 	constructor(iState: any) {
 		this.codapState = iState;
@@ -46,7 +47,7 @@ export class Moment {
 	}
 
 	toString() : string {
-		return `ID: ${this.ID} title: ${this.title} narrative: ${this.narrative}`;
+		return `ID: ${this.ID} title: ${this.title} narrative: ${this.extractNarrative()}`;
 	}
 
 	setCodapState(iCodapState: object) {
@@ -63,6 +64,14 @@ export class Moment {
 
 	setNarrative(iText: string) {
 		this.narrative = iText;
+	}
+
+	extractNarrative() : string {
+		if (this.narrative.document) {
+			return this.narrative.document.children[0].children[0].text;
+		} else {
+			return this.narrative;
+		}
 	}
 }
 
@@ -81,3 +90,4 @@ export function MomentView(props: any) {
 		</div>
 	);
 }
+
