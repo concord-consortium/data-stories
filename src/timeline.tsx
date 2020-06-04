@@ -33,15 +33,18 @@ export class Timeline {
             tIndex = 0,
             tCurrMomentIndex: Number = 0;
         while (tMoment) {
+/*
             if (tMoment === this.currentMoment)
                 tCurrMomentIndex = tIndex;
+*/
             tMomentArray.push(tMoment.createStorage());
             tMoment = tMoment.next;
             tIndex++;
         }
+
         return {
             moments: tMomentArray,
-            currentMomentIndex: tCurrMomentIndex
+            nextMomentID : this.nextMomentID,
         }
     }
 
@@ -50,6 +53,10 @@ export class Timeline {
             tCurrMoment: Moment | null = null;
         this.startingMoment = null;
         this.currentMoment = null;
+        if (iStorage) {
+            this.nextMomentID = iStorage.nextMomentID;
+        }
+
         if (!(iStorage && iStorage.moments))
             return;
         iStorage.moments.forEach((iMomentStorage: any, iIndex: Number) => {
@@ -66,6 +73,8 @@ export class Timeline {
             if (iStorage.currentMomentIndex === iIndex)
                 this_.currentMoment = tMoment;
         })
+
+        this.currentMoment = this.startingMoment;   //  force current moment to be at the beginning
     }
 
 
@@ -79,13 +88,13 @@ export class Timeline {
      * @param iID
      */
 
-    /*
+
             momentByID(iID: number): Moment {
                     return this.moments.find(function (xSE) {
                             return xSE.ID === iID
                     }) as Moment;
             }
-    */
+
 
     /**
      * Called from above. User has clicked on a particular moment, so we are about to time travel there.
@@ -98,46 +107,52 @@ export class Timeline {
     }
 
     handleDrop(x: number): Moment | null {
-        let pMoment: Moment | null = null;
+        let insertAfterThisMoment: Moment | null = null;     //  We will insert the dropped moment after this one.
 
-        if (this.momentBeingDragged) {
+        if (this.momentBeingDragged instanceof Moment) {
+            this.currentMoment = this.momentBeingDragged;
             console.log("Dropping [" + this.momentBeingDragged.title + "] ");
-            pMoment = this.startingMoment;
+            console.log(this.getMomentSummary());
+            insertAfterThisMoment = this.startingMoment;
             let done: boolean = false;
 
-            if (pMoment) {
-                let momentWereLookingAt: Moment = pMoment;
+            if (insertAfterThisMoment) {
+                let ixMoment: Moment = insertAfterThisMoment;   //      index for list traversal
 
                 while (!done) {
-                    const theElement: any = document.getElementById("DSMarker" + momentWereLookingAt.ID);
+                    //  calculate position of the ixMoment box on the screen
+                    const theElement: any = document.getElementById("DSMarker" + ixMoment.ID);
                     const momentRect: DOMRect = theElement.getBoundingClientRect();
                     const momentCenter = momentRect.left + momentRect.width / 2;
 
-                    if (x < momentCenter) {
+                    if (x < momentCenter) {     //  left half of ixMoment
                         done = true;
-                        pMoment = momentWereLookingAt.prev;
-                    } else if (x < momentRect.right) {
-                        pMoment = momentWereLookingAt;
+                        insertAfterThisMoment = ixMoment.prev;  //  is it's the first moment, this is null.
+                    } else if (x < momentRect.right) {      //  right half of ixMoment
+                        insertAfterThisMoment = ixMoment;
                         done = true;
                     }
 
-                    if (momentWereLookingAt.next) {
-                        momentWereLookingAt = momentWereLookingAt.next;
-                    } else {
-                        pMoment = momentWereLookingAt;
+                    if (ixMoment.next) {        //  next element in list
+                        ixMoment = ixMoment.next;
+                    } else {                    //  end of list? Insert after this last element.
+                        insertAfterThisMoment = ixMoment;
                         done = true;
                     }
                 }
             }
 
-            if (this.momentBeingDragged !== pMoment) {
+            if (this.momentBeingDragged !== insertAfterThisMoment) {
                 this.removeMoment(this.momentBeingDragged);
-                this.insertMomentAfterMoment(this.momentBeingDragged, pMoment);
+                this.insertMomentAfterMoment(this.momentBeingDragged, insertAfterThisMoment);
+                this.currentMoment = this.momentBeingDragged;   //  restore currentMoment, which was destroyed in the remove
             }
-            this.currentMoment = this.momentBeingDragged;
         }
         const returnValue: Moment | null = this.momentBeingDragged;
         this.momentBeingDragged = null;
+
+        console.log(this.getMomentSummary());
+
         return returnValue;
     }
 

@@ -47,7 +47,7 @@ export class Moment {
 	}
 
 	toString() : string {
-		return `ID: ${this.ID} title: ${this.title} narrative: ${this.extractNarrative()}`;
+		return `ID: ${this.ID} title: [${this.title}] narrative: ${this.extractNarrative()}`;
 	}
 
 	setCodapState(iCodapState: object) {
@@ -70,7 +70,7 @@ export class Moment {
 		if (this.narrative.document) {
 			return this.narrative.document.children[0].children[0].text;
 		} else {
-			return this.narrative;
+			return "(txt) " + this.narrative;
 		}
 	}
 }

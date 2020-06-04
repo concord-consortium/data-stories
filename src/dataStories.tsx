@@ -323,17 +323,18 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
      * @param iState
      */
     private async matchMomentToCODAPState(iMoment: Moment | null, iState: object): Promise<void> {
+        const tTextBoxInfo: any = getNarrativeBoxInfoFromCodapState(iState);
         if (iMoment instanceof Moment) {
-            console.log(`iMoment before update: ${iMoment.toString()}`)
+            console.log(`Setting [${iMoment.title}] to match a state (text comp title is ${tTextBoxInfo.title})... 
+            \n    before update: ${iMoment.toString()}`)
             iMoment.setCodapState(iState);
             iMoment.created = new Date();
 
-            const tTextBoxInfo: any = getNarrativeBoxInfoFromCodapState(iState);
             iMoment.setTitle(tTextBoxInfo.title);
             iMoment.setNarrative(tTextBoxInfo.narrative);
 
 
-            console.log(`iMoment after update: ${iMoment.toString()}`)
+            console.log(`    after update: ${iMoment.toString()}`)
         } else {
             console.log(`Hmmm. Tried to update a non-Moment in updateMoment(): ${JSON.stringify(iMoment)}`)
         }
@@ -407,6 +408,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
      */
     public async handleMomentClick(e: MouseEvent, iMoment: Moment) {
         if (iMoment) {
+            console.log(`Click on [${iMoment.title}`);
             this.doBeginChangeToNewMoment(iMoment);
         }
     }
