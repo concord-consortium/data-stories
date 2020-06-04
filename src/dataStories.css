@@ -93,6 +93,10 @@
     border: 2px solid;
 }
 
+.unsavedMoment {
+    background-color: #def;
+}
+
 .tool {
     width: 28px;
     background-color: gold;

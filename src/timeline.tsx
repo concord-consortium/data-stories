@@ -16,19 +16,6 @@ export class Timeline {
 
     private kDefaultNarrative: string = `What did you do? Why did you do it? ... ¿Qué hizo? ¿Por qué?`;
 
-    /*
-        private kDefaultNarrativeAsJSON : object = {
-            object:"value",
-            document:{
-                children:[
-                    {type:"paragraph",
-                    children:[
-                        {text:"What did you do? Why did you do it?"}
-                        ]},
-                    {type:"paragraph",
-                        children:[{"text":"¿Qué hizo? ¿Por qué?"}]}],
-                "objTypes":{"paragraph":"block"}}};
-    */
 
     constructor(iParent: any) {
         //  this.initializeToCodapState(null);
@@ -105,12 +92,6 @@ export class Timeline {
      * Adjust this timeline (model) so that everything is set correctly.
      * @param iMoment   the moment being clicked on
      */
-/*
-    handleMomentClick(iMoment: Moment | null): Moment | null {
-        this.currentMoment = iMoment;
-        return iMoment;
-    }
-*/
 
     handleDragStart(e: React.DragEvent, iMoment: Moment) {
         this.momentBeingDragged = iMoment;
@@ -148,17 +129,12 @@ export class Timeline {
                     }
                 }
             }
-            /*
-                                            while (slot > pIndex && pMoment) {
-                                                    if (pMoment.next) pMoment = pMoment.next;   //  peg at last moment in list
-                                                    pIndex++;
-                                            }
-            */
 
             if (this.momentBeingDragged !== pMoment) {
                 this.removeMoment(this.momentBeingDragged);
                 this.insertMomentAfterMoment(this.momentBeingDragged, pMoment);
             }
+            this.currentMoment = this.momentBeingDragged;
         }
         const returnValue: Moment | null = this.momentBeingDragged;
         this.momentBeingDragged = null;
@@ -301,12 +277,14 @@ export class Timeline {
 
     getMomentSummary(): string {
         let out = `\n`;
-        this.moments.forEach(m => {
+        let m = this.startingMoment;
+        while (m) {
             out += `m ${m.ID} `
                 + ((m === this.currentMoment) ? "*" : " ")
                 + `[${m.title}]`
                 + "\n";
-        });
+            m = m.next;
+        }
         return out;
     }
 }

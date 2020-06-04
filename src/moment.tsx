@@ -38,6 +38,7 @@ export class Moment {
 	
 	restoreFromStorage(iStorage: any) {
 		this.ID = iStorage.ID;
+		this.codapState = iStorage.codapState;
 		this.isMarker = iStorage.isMarker;
 		this.title = iStorage.title;
 		this.created = new Date(iStorage.created);
@@ -77,6 +78,7 @@ export class Moment {
 export function MomentView(props: any) {
 	let theClasses = " story-child marker";
 	if (props.isCurrent) theClasses += " current";
+	if (props.hasNoCodapState) theClasses += " unsavedMoment";
 	return (
 		<div id={"DSMarker" + props.id}
 				 className={theClasses}

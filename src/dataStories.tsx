@@ -20,11 +20,10 @@ const kNarrativeTextBoxInitialContents = "This is the beginning of your data sto
 const kMagnifyingGlass = "\ud83d\udd0d";
 const kCheckmark = "\u2714";
 const kTrashCan = "\uD83D\uddd1";
-const kSeparatorString = "\n\n";
 const kSave = "save";
 const kRevert = "rev";
 
-const kVersion = "0.2";
+const kVersion = "0.3";
 const kInitialWideDimensions = {
     width: 800,
     height: 100
@@ -130,7 +129,6 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         super(props);
         this.state = {numNotifications: 0, stateID: -1, storyMode: 'scrubber'};
 
-
         this.handleNotification = this.handleNotification.bind(this);
         this.changeStoryMode = this.changeStoryMode.bind(this);
         this.handleDeleteCurrentMoment = this.handleDeleteCurrentMoment.bind(this);
@@ -146,16 +144,18 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
 
         /**
          * We delay the start making the initial moment to let the text box appear;
-         * otherwise the text box will not be in that marker's codapState.
+         * otherwise the text box will not be in that Moment's codapState.
          */
-        const this_ = this;
-        setTimeout(function () {
-            if (!this_.timeline.startingMoment) {
-                this_.makeInitialMomentAndTextComponent();
-            } else {
-                this_.forceUpdate();
-            }
-        }, kInitialMomentStartDelay);
+        if (needNarrativeTextBox()) {
+            const this_ = this;
+            setTimeout(function () {
+                if (!this_.timeline.startingMoment) {
+                    this_.makeInitialMomentAndTextComponent();
+                } else {
+                    this_.forceUpdate();
+                }
+            }, kInitialMomentStartDelay);
+        }
 
         //  Swal.fire('Hello, Tim!');
         console.log("Initial clear() completed. Initial mode is " + this.state.storyMode);
@@ -549,6 +549,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                 </div>
 
                 {/*   revert button */}
+{/*
                 <div id="updateButton"
                      className="story-child tool icon-button"
                      onClick={this.handleRevertCurrentMoment}
@@ -556,8 +557,10 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                 >
                     {kRevert}
                 </div>
+*/}
 
                 {/*   update button */}
+{/*
                 <div id="updateButton"
                      className="story-child tool icon-button"
                      onClick={this.handleUpdateCurrentMoment}
@@ -565,6 +568,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                 >
                     {kSave}
                 </div>
+*/}
 
                 {/*		this is the shutter button, for making a new marker		*/}
                 <div className="story-child tool icon-button"
@@ -615,7 +619,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                         onClick={(e: MouseEvent) => this_.handleMomentClick(e, aMoment)}
                         isCurrent={aMoment === this_.timeline.currentMoment}
                         theText={aMoment.title}
-                        isMarker={aMoment.isMarker}
+                        hasNoCodapState={(aMoment.codapState === null)}
                     />
                 )
             }
