@@ -36,10 +36,10 @@ export class Timeline {
             tIndex = 0,
             tCurrMomentIndex: Number = 0;
         while (tMoment) {
-/*
+
             if (tMoment === this.currentMoment)
                 tCurrMomentIndex = tIndex;
-*/
+
             tMomentArray.push(tMoment.createStorage());
             tMoment = tMoment.next;
             tIndex++;
@@ -48,6 +48,7 @@ export class Timeline {
         return {
             moments: tMomentArray,
             nextMomentID : this.nextMomentID,
+            currentMomentIndex : tCurrMomentIndex,
         }
     }
 
@@ -77,7 +78,7 @@ export class Timeline {
                 this_.currentMoment = tMoment;
         })
 
-        this.currentMoment = this.startingMoment;   //  force current moment to be at the beginning
+        //  this.currentMoment = this.startingMoment;   //  force current moment to be at the beginning
     }
 
 
