@@ -14,6 +14,8 @@ export class Timeline {
     private nextMomentID: number = 0;
     private momentBeingDragged: Moment | null = null;
 
+    private kInitialJSONText = "{\"object\":\"value\",\"document\":{\"children\":[{\"type\":\"paragraph\",\"children\":[{\"text\":\"Opening text\"}]},{\"type\":\"paragraph\",\"children\":[{\"text\":\"Second paragraph\"}]}],\"objTypes\":{\"paragraph\":\"block\"}}}";
+
     private kDefaultNarrative: string = `What did you do? Why did you do it? ... ¿Qué hizo? ¿Por qué?`;
 
 
@@ -22,6 +24,7 @@ export class Timeline {
         this.parent = iParent;
         this.moments = [];
     }
+
 
     getCurrentMomentTitle(): string {
         return (this.currentMoment) ? this.currentMoment.title : "";
@@ -269,7 +272,7 @@ export class Timeline {
         this.insertMomentAfterMoment(tNewMoment, this.currentMoment);
 
         tNewMoment.title = (tNewMoment.ID === 0) ? "start ... comienzo" : "Moment " + tNewMoment.ID;
-        tNewMoment.narrative = this.kDefaultNarrative;
+        tNewMoment.narrative = this.kInitialJSONText;
         return tNewMoment;
     }
 

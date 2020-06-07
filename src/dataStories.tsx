@@ -16,7 +16,7 @@ const kPluginName = "Story Builder";
 const kInitialMomentStartDelay = 1200;      //  milliseconds
 const kNarrativeTextBoxName = "WDS-narrative-box";
 const kNarrativeTextBoxTitle = "start ... comienzo";
-const kNarrativeTextBoxInitialContents = "This is the beginning of your data story ... Esto es el comienzo de su cuento de datos";
+
 const kMagnifyingGlass = "\ud83d\udd0d";
 const kCheckmark = "\u2714";
 const kTrashCan = "\uD83D\uddd1";
@@ -46,48 +46,33 @@ function Credits(props: any) {
 function getNarrativeBoxInfoFromCodapState(iState: any): object {
     const theComponents = iState.components;
     let theComponentStorage: any = null;
-    theComponents.forEach((comp: any) => {
-        if (comp.type === "DG.TextView" && comp.componentStorage.name === kNarrativeTextBoxName) {
-            theComponentStorage = comp.componentStorage;
+
+    if (theComponents.length > 1) {
+        theComponents.forEach((comp: any) => {
+            if (comp.type === "DG.TextView" /* && comp.componentStorage.name === kNarrativeTextBoxName */) {
+                theComponentStorage = comp.componentStorage;
+            }
+        });
+
+        if (theComponentStorage) {
+            return {
+                narrative: theComponentStorage.text,
+                title: theComponentStorage.title,
+            }
+        } else {
+            alert(`problem: theComponentStorage may be null. Perhaps the text component is missing or undetectable...`);
+
         }
-    });
+    } else {
+        alert(`problem: theComponents has length ${theComponents.length}. We expect at least two!`);
+    }
 
     return {
-        narrative: theComponentStorage.text,
-        title: theComponentStorage.title,
+        narrative : "foo",
+        title : "foo",
     }
 }
 
-/**
- * If necessary, create a text component to hold information about the
- * current marker's Moment, principally any narrative text the student has written.
- *
- * Called as `window.onload` because we want to delay checking until any pre-existing text
- * box is restored.
- */
-async function makeInitialNarrativeTextBox(): Promise<void> {
-    const tNeed: boolean = await needNarrativeTextBox();
-
-    if (tNeed) {
-        const theMessage = {
-            action: "create",
-            resource: "component",
-            values: {
-                type: "text",
-                name: kNarrativeTextBoxName,
-                title: kNarrativeTextBoxTitle,
-                cannotClose: true,
-                text: kNarrativeTextBoxInitialContents,
-            }
-        };
-
-        const tResult: any = await codapInterface.sendRequest(theMessage);
-        if (tResult.success) {
-            gNarrativeBoxID = tResult.values.id;
-            console.log(`Text box id ${gNarrativeBoxID} created.`);
-        }
-    }
-}
 
 function resetChangeCount(): void {
     console.log(`RESET: change count from ${gChangeCount} to 0`);
@@ -192,7 +177,8 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         //      at this point, `tMoment.codapState` is still null.
 
         this.timeline.currentMoment = tMoment;
-        //  this.doBeginChangeToNewMoment(tMoment);
+        await StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
+
         this.forceUpdate();     //  make the moment appear on the screen in the bar
     }
 
@@ -408,7 +394,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
      */
     public async handleMomentClick(e: MouseEvent, iMoment: Moment) {
         if (iMoment) {
-            console.log(`Click on [${iMoment.title}`);
+            console.log(`Click on [${iMoment.title}]`);
             this.doBeginChangeToNewMoment(iMoment);
         }
     }
