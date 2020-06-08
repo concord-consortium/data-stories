@@ -14,7 +14,8 @@ export class Timeline {
     private nextMomentID: number = 0;
     private momentBeingDragged: Moment | null = null;
 
-    private kInitialJSONText = "{\"object\":\"value\",\"document\":{\"children\":[{\"type\":\"paragraph\",\"children\":[{\"text\":\"Opening text\"}]},{\"type\":\"paragraph\",\"children\":[{\"text\":\"Second paragraph\"}]}],\"objTypes\":{\"paragraph\":\"block\"}}}";
+    private kInitialJSONText = "{\"object\":\"value\",\"document\":{\"children\":[{\"type\":\"paragraph\",\"children\":[{\"text\":\"What did you do? Why did you do it?\"}]},{\"type\":\"paragraph\",\"children\":[{\"text\":\"¿Qué hizo? ¿Por qué?\"}]}],\"objTypes\":{\"paragraph\":\"block\"}}}";
+    private kInitialJSONText_start = "{\"object\":\"value\",\"document\":{\"children\":[{\"type\":\"paragraph\",\"children\":[{\"text\":\"This is the beginning of your data story.\"}]},{\"type\":\"paragraph\",\"children\":[{\"text\":\"Esto es el comienzo de su cuento de datos.\"}]}],\"objTypes\":{\"paragraph\":\"block\"}}}";
 
     private kDefaultNarrative: string = `What did you do? Why did you do it? ... ¿Qué hizo? ¿Por qué?`;
 
@@ -273,7 +274,7 @@ export class Timeline {
         this.insertMomentAfterMoment(tNewMoment, this.currentMoment);
 
         tNewMoment.title = (tNewMoment.ID === 0) ? "start ... comienzo" : "Moment " + tNewMoment.ID;
-        tNewMoment.narrative = this.kInitialJSONText;
+        tNewMoment.narrative = tNewMoment.ID ? this.kInitialJSONText : this.kInitialJSONText_start;
         return tNewMoment;
     }
 
