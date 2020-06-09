@@ -207,31 +207,29 @@ export class Timeline {
      * That happened when the moment was created.
      * we are only adjusting its prev and next fields.
      *
-     * @param moment    moment to insert
+     * @param newMoment    moment to insert
      * @param previousMoment  moment after which to insert it.
      */
-    insertMomentAfterMoment(moment: Moment, previousMoment: Moment | null) {
+    insertMomentAfterMoment(newMoment: Moment, previousMoment: Moment | null) {
         let subsequentMoment;
 
         if (previousMoment) {
             subsequentMoment = previousMoment.next;
-            moment.prev = previousMoment;
-            moment.next = subsequentMoment; //  null if at the end
-            previousMoment.next = moment;
+            newMoment.prev = previousMoment;
+            newMoment.next = subsequentMoment; //  null if at the end
+            previousMoment.next = newMoment;
         } else {
             //   there are no moments in the list, e.g., at initialization
             //  or we're moving this moment to the beginning of the list, so
             //  previousMoment is null.
-            moment.next = this.startingMoment;  //  which is null if the list is empty
-            this.startingMoment = moment;
-            moment.prev = null;
-            subsequentMoment = moment.next;
+            newMoment.next = this.startingMoment;  //  which is null if the list is empty
+            this.startingMoment = newMoment;
+            newMoment.prev = null;
+            subsequentMoment = newMoment.next;
         }
         if (subsequentMoment) {
-            subsequentMoment.prev = moment;
+            subsequentMoment.prev = newMoment;
         }
-
-        //  this.currentMoment = moment;
     }
 
     /**

@@ -43,13 +43,34 @@ function Credits(props: any) {
     )
 }
 
+function putTextComponentInfoIntoCodapState(info: any, iState: any): void {
+    const theComponents = iState.components;
+    let theComponentStorage: any = null;
+
+    if (theComponents.length) {     //  works even if there is only one component; why not, after all?
+        theComponents.forEach((comp: any) => {
+            if (comp.type === "DG.TextView" && comp.componentStorage.name === kNarrativeTextBoxName) {
+                theComponentStorage = comp.componentStorage;
+                if (theComponentStorage) {
+                    theComponentStorage.text = info.narrative;
+                    theComponentStorage.title = info.title;
+                }
+            }
+        });
+
+    } else {
+        alert(`problem: theComponents has length ${theComponents.length}. We expect at least one!`);
+    }
+
+}
+
 function getNarrativeBoxInfoFromCodapState(iState: any): object {
     const theComponents = iState.components;
     let theComponentStorage: any = null;
 
     if (theComponents.length > 1) {
         theComponents.forEach((comp: any) => {
-            if (comp.type === "DG.TextView" /* && comp.componentStorage.name === kNarrativeTextBoxName */) {
+            if (comp.type === "DG.TextView" && comp.componentStorage.name === kNarrativeTextBoxName) {
                 theComponentStorage = comp.componentStorage;
             }
         });
@@ -68,8 +89,8 @@ function getNarrativeBoxInfoFromCodapState(iState: any): object {
     }
 
     return {
-        narrative : "foo",
-        title : "foo",
+        narrative: "foo",
+        title: "foo",
     }
 }
 
@@ -217,8 +238,9 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
 
             const qSaveChanges =
                 `You have ${gChangeCount} change${gChangeCount === 1 ? "" : "s"}. ` +
-                `Would you like to save ${gChangeCount === 1 ? "it" : "them"} in ${this.timeline.getCurrentMomentTitle()}?`;
-            const qChangesStayOnScreen = `Stay on screen?`;
+                `Would you like to save ${gChangeCount === 1 ? "it" : "them"} in [${this.timeline.getCurrentMomentTitle()}]?`;
+            const qChangesStayOnScreen = `The new moment you're making will be called [${this.timeline.dstMoment.title}]. ` +
+                `Would you like these changes to appear in [${this.timeline.dstMoment.title}]?`;
 
             this.saveStateInSrcMoment = false;
             this.saveStateInDstMoment = false;
@@ -268,10 +290,10 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         if (this.waitingForDocumentState) {
             this.waitingForDocumentState = false;
             if (this.saveStateInSrcMoment) {
-                this.matchMomentToCODAPState(this.timeline.srcMoment, iCommand.values.state);
+                this.matchMomentToCODAPState(this.timeline.srcMoment, iCommand.values.state, false);
             }
             if (this.saveStateInDstMoment) {
-                this.matchMomentToCODAPState(this.timeline.dstMoment, iCommand.values.state);
+                this.matchMomentToCODAPState(this.timeline.dstMoment, iCommand.values.state, true);
             }
             this.doEndChangeToNewMoment();
         }
@@ -308,7 +330,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
      * @param iMoment
      * @param iState
      */
-    private async matchMomentToCODAPState(iMoment: Moment | null, iState: object): Promise<void> {
+    private async matchMomentToCODAPState(iMoment: Moment | null, iState: object, preserveMomentInfo: boolean): Promise<void> {
         const tTextBoxInfo: any = getNarrativeBoxInfoFromCodapState(iState);
         if (iMoment instanceof Moment) {
             console.log(`Setting [${iMoment.title}] to match a state (text comp title is ${tTextBoxInfo.title})... 
@@ -316,8 +338,15 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
             iMoment.setCodapState(iState);
             iMoment.created = new Date();
 
-            iMoment.setTitle(tTextBoxInfo.title);
-            iMoment.setNarrative(tTextBoxInfo.narrative);
+            if (preserveMomentInfo) {
+                putTextComponentInfoIntoCodapState({
+                    title: iMoment.title,
+                    narrative: iMoment.narrative
+                }, iMoment.codapState);
+            } else {
+                iMoment.setTitle(tTextBoxInfo.title);
+                iMoment.setNarrative(tTextBoxInfo.narrative);
+            }
 
 
             console.log(`    after update: ${iMoment.toString()}`)
@@ -537,7 +566,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                 </div>
 
                 {/*   revert button */}
-{/*
+                {/*
                 <div id="updateButton"
                      className="story-child tool icon-button"
                      onClick={this.handleRevertCurrentMoment}
@@ -548,7 +577,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
 */}
 
                 {/*   update button */}
-{/*
+                {/*
                 <div id="updateButton"
                      className="story-child tool icon-button"
                      onClick={this.handleUpdateCurrentMoment}
@@ -561,7 +590,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                 {/*		this is the shutter button, for making a new marker		*/}
                 <div className="story-child tool icon-button"
                      onClick={this.handleMakeNewMomentButtonPress}
-                     title={"mark the current state"}
+                     title={"capture this moment"}
                 >
                     <img width={"28"} src={shutterImage}></img>
                     {/*{kCheckmark}*/}
