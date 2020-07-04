@@ -23,7 +23,7 @@ const kTrashCan = "\uD83D\uddd1";
 const kSave = "save";
 const kRevert = "rev";
 
-const kVersion = "0.3";
+const kVersion = "0.4b";
 const kInitialWideDimensions = {
     width: 800,
     height: 100
@@ -104,16 +104,16 @@ function resetChangeCount(): void {
  * Determine is we need a fresh narrative text box.
  * Returns false if one already exists
  */
-async function needNarrativeTextBox(): Promise<boolean> {
+async function needNarrativeTextBox(): Promise<number> {
     const theMessage = {action: "get", resource: "componentList"};
     const theResult: any = await codapInterface.sendRequest(theMessage);
-    let need: boolean = true;
+    let need: number = 0;
 
     if (theResult.success) {
         theResult.values.forEach((c: any) => {
             if (c.name === kNarrativeTextBoxName) {
                 if (c.type === 'text') {
-                    need = false;
+                    need = c.id;
                 }
             }
         })
@@ -152,28 +152,41 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
          * We delay the start making the initial moment to let the text box appear;
          * otherwise the text box will not be in that Moment's codapState.
          */
-        if (needNarrativeTextBox()) {
-            const this_ = this;
-            setTimeout(function () {
-                if (!this_.timeline.startingMoment) {
-                    this_.makeInitialMomentAndTextComponent();
-                } else {
-                    this_.forceUpdate();
-                }
-            }, kInitialMomentStartDelay);
+
+        needNarrativeTextBox().then( (theID) => {
+            if (theID)  {   //  there is a text box with a nonzero ID
+                console.log(`StoryArea constructor: initial text box found with ID ${theID}`);
+                gNarrativeBoxID = theID;
+
+            } else {
+                const this_ = this;
+                setTimeout(function () {
+                    if (!this_.timeline.startingMoment) {
+                        this_.makeInitialMomentAndTextComponent();
+                    } else {
+                        this_.forceUpdate();
+                    }
+                }, kInitialMomentStartDelay);
+            }
         }
+
+    )
 
         //  Swal.fire('Hello, Tim!');
         console.log("Initial clear() completed. Initial mode is " + this.state.storyMode);
     }
 
     async makeInitialMomentAndTextComponent(): Promise<void> {
-        const tMoment = this.timeline.makeNewMomentUsingCodapState(null);
+        const tMoment = this.timeline.makeNewMomentUsingCodapState(null);   //  the unsaved moment has no state yet
 
         //  make initial text box
-        const tNeed: boolean = await needNarrativeTextBox();
+        const tNarrativeID: number = await needNarrativeTextBox();
 
-        if (tNeed) {
+        if (tNarrativeID) {
+            gNarrativeBoxID = tNarrativeID;
+            console.log(`StoryArea.makeInitialMomentAndTextComponent: Text box id ${gNarrativeBoxID} found.`);
+
+        } else {
             const theMessage = {
                 action: "create",
                 resource: "component",
@@ -189,10 +202,8 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
             const tResult: any = await codapInterface.sendRequest(theMessage);
             if (tResult.success) {
                 gNarrativeBoxID = tResult.values.id;
-                console.log(`Text box id ${gNarrativeBoxID} created.`);
+                console.log(`StoryArea.makeInitialMomentAndTextComponent: Text box id ${gNarrativeBoxID} created.`);
             }
-        } else {
-            console.log("Text box already existed");
         }
 
         //      at this point, `tMoment.codapState` is still null.
@@ -219,7 +230,8 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
     }
 
     restorePluginState(iStorage: any) {
-        this.timeline.restoreFromStorage(iStorage)
+        this.timeline.restoreFromStorage(iStorage);
+        this.forceUpdate();
     }
 
     doBeginChangeToNewMoment(iMoment: Moment | null) {
@@ -775,18 +787,20 @@ class DataStories
                             console.log(kPluginName + ' has ID ' + thePluginID);
                         }
                     });
+
                     const positionValues = "{left: 8, top: 222}";       //  'bottom'
                     const adjustPluginMessage = {
                         'action': 'update',
                         'resource': 'component[' + thePluginID + ']',
-                        'values': {'position': positionValues, 'cannotClose': true}
+                        'values': {/* 'position': positionValues, */ 'cannotClose': true}
                     };
-                    //  console.log('trying to adjust the plugin with ' + JSON.stringify(adjustPluginMessage));
+
                     codapInterface.sendRequest(adjustPluginMessage).then(
                         (res) => {
-                            console.log('Adjust plugin result: ' + JSON.stringify(res));
+                            //  console.log('Adjust plugin result: ' + JSON.stringify(res));
                         }
                     );
+
                 }
             );
         } catch (err) {

@@ -14,8 +14,8 @@ export class Timeline {
     private nextMomentID: number = 0;
     private momentBeingDragged: Moment | null = null;
 
-    private kInitialJSONText = "{\"object\":\"value\",\"document\":{\"children\":[{\"type\":\"paragraph\",\"children\":[{\"text\":\"What did you do? Why did you do it?\"}]},{\"type\":\"paragraph\",\"children\":[{\"text\":\"¿Qué hizo? ¿Por qué?\"}]}],\"objTypes\":{\"paragraph\":\"block\"}}}";
-    private kInitialJSONText_start = "{\"object\":\"value\",\"document\":{\"children\":[{\"type\":\"paragraph\",\"children\":[{\"text\":\"This is the beginning of your data story.\"}]},{\"type\":\"paragraph\",\"children\":[{\"text\":\"Esto es el comienzo de su cuento de datos.\"}]}],\"objTypes\":{\"paragraph\":\"block\"}}}";
+    private kInitialJSONText = `{"object":"value","document":{"children":[{"type":"paragraph","children":[{"text":"What did you do? Why did you do it?"}]},{"type":"paragraph","children":[{"text":"¿Qué hizo? ¿Por qué?"}]}],"objTypes":{"paragraph":"block"}}}`;
+    private kInitialJSONText_start = `{"object":"value","document":{"children":[{"type":"paragraph","children":[{"text":"This is the beginning of your data story."}]},{"type":"paragraph","children":[{"text":"Esto es el comienzo de su cuento de datos."}]}],"objTypes":{"paragraph":"block"}}}`;
 
     private kDefaultNarrative: string = `What did you do? Why did you do it? ... ¿Qué hizo? ¿Por qué?`;
 
