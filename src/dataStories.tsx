@@ -2,7 +2,7 @@ import React, {Component} from 'react';
 import codapInterface from "./lib/CodapInterface";
 import {initializePlugin} from './lib/codap-helper';
 import {Timeline} from './timeline';
-import {MomentView, Moment} from './moment';
+import {MomentModel, Moment} from './moment';
 //  import Swal from 'sweetalert2';
 import './dataStories.css';
 
@@ -23,7 +23,7 @@ const kTrashCan = "\uD83D\uddd1";
 const kSave = "save";
 const kRevert = "rev";
 
-const kVersion = "0.4b";
+const kVersion = "0.5";
 const kInitialWideDimensions = {
     width: 800,
     height: 100
@@ -234,7 +234,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         this.forceUpdate();
     }
 
-    doBeginChangeToNewMoment(iMoment: Moment | null) {
+    doBeginChangeToNewMoment(iMoment: MomentModel | null) {
 
         if (this.timeline.currentMoment) {
             this.timeline.srcMoment = this.timeline.currentMoment;
@@ -249,7 +249,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
             //  we are now guaranteed that srcMoemnt and dstMoment are Moments, not null.
 
             const qSaveChanges =
-                `You have ${gChangeCount} change${gChangeCount === 1 ? "" : "s"}. ` +
+                `You have made ${gChangeCount === 1 ? "a change" : "some changes"}. ` +
                 `Would you like to save ${gChangeCount === 1 ? "it" : "them"} in [${this.timeline.getCurrentMomentTitle()}]?`;
             const qChangesStayOnScreen = `The new moment you're making will be called [${this.timeline.dstMoment.title}]. ` +
                 `Would you like these changes to appear in [${this.timeline.dstMoment.title}]?`;
@@ -342,13 +342,13 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
      * @param iMoment
      * @param iState
      */
-    private async matchMomentToCODAPState(iMoment: Moment | null, iState: object, preserveMomentInfo: boolean): Promise<void> {
+    private async matchMomentToCODAPState(iMoment: MomentModel | null, iState: object, preserveMomentInfo: boolean): Promise<void> {
         const tTextBoxInfo: any = getNarrativeBoxInfoFromCodapState(iState);
-        if (iMoment instanceof Moment) {
+        if (iMoment instanceof MomentModel) {
             console.log(`Setting [${iMoment.title}] to match a state (text comp title is ${tTextBoxInfo.title})... 
             \n    before update: ${iMoment.toString()}`)
             iMoment.setCodapState(iState);
-            iMoment.created = new Date();
+            iMoment.modified = new Date();
 
             if (preserveMomentInfo) {
                 putTextComponentInfoIntoCodapState({
@@ -398,7 +398,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
     }
 
 
-    private async matchCODAPStateToMoment(iMoment: Moment | null) {
+    private async matchCODAPStateToMoment(iMoment: MomentModel | null) {
         const newState = (iMoment) ? iMoment.codapState : null;
         this.restoreCodapState(newState);
     }
@@ -433,7 +433,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
      * @param   e     the mouse event
      * @param iMoment   the moment (set in the original onClick)
      */
-    public async handleMomentClick(e: MouseEvent, iMoment: Moment) {
+    public async handleMomentClick(e: MouseEvent, iMoment: MomentModel) {
         if (iMoment) {
             console.log(`Click on [${iMoment.title}]`);
             this.doBeginChangeToNewMoment(iMoment);
@@ -500,7 +500,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
      * Given a Moment, display its narrative in the narrative text box
      * @param iMoment
      */
-    private static async displayNarrativeInTextBox(iMoment: Moment | null): Promise<void> {
+    private static async displayNarrativeInTextBox(iMoment: MomentModel | null): Promise<void> {
         let momentTitleString, narrativeString;
         if (iMoment) {
             momentTitleString = iMoment.title;
@@ -577,35 +577,12 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                     {kTrashCan}
                 </div>
 
-                {/*   revert button */}
-                {/*
-                <div id="updateButton"
-                     className="story-child tool icon-button"
-                     onClick={this.handleRevertCurrentMoment}
-                     title={"press to update the current moment"}
-                >
-                    {kRevert}
-                </div>
-*/}
-
-                {/*   update button */}
-                {/*
-                <div id="updateButton"
-                     className="story-child tool icon-button"
-                     onClick={this.handleUpdateCurrentMoment}
-                     title={"press to update the current moment"}
-                >
-                    {kSave}
-                </div>
-*/}
-
                 {/*		this is the shutter button, for making a new marker		*/}
                 <div className="story-child tool icon-button"
                      onClick={this.handleMakeNewMomentButtonPress}
                      title={"capture this moment"}
                 >
                     <img width={"28"} src={shutterImage}></img>
-                    {/*{kCheckmark}*/}
                 </div>
             </div>
         );
@@ -638,7 +615,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         const theMoments = momentsOnThisTimeline.map(
             (aMoment) => {
                 return (
-                    <MomentView
+                    <Moment
                         key={aMoment.ID}
                         id={aMoment.ID}
                         onDragStart={
@@ -667,64 +644,10 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
             </div>
         );
 
-        /*
-        If we are editing (focusing on) a particular moment, we look in detail at that moment,
-        which we call theFocusMoment.
-         */
-        const theFocusMoment: Moment | null = this.timeline.currentMoment;       //  focusMoment();
+        //  material about the focus area (deprecated) came from here. Removed for clarity.
 
-        const focusArea = (theFocusMoment !== null) ?
-            (
-                <div className="focus-area">
-                    <p>
-                        {/*
-                        <label for={"focusMomentTitleText"}>Moment {theFocusMoment.ID}</label>
-*/}
-                        <input
-                            id="focusMomentTitleText"
-                            type={"text"}
-                            value={theFocusMoment.title}
-                            onChange={(e) => {
-                                const theText: string = e.target.value;
-                                theFocusMoment.setTitle(theText);
-                                StoryArea.displayNarrativeInTextBox(theFocusMoment);
-                                this.forceUpdate();
-                            }}
-                        />
-                        ({theFocusMoment.created.toLocaleTimeString()})
-                    </p>
-
-                    narrative:<br/>
-                    <textarea
-                        rows={5}
-                        value={theFocusMoment.narrative}
-                        onChange={(e) => {
-                            const theText: string = e.target.value;
-                            theFocusMoment.setNarrative(theText);
-                            StoryArea.displayNarrativeInTextBox(theFocusMoment);
-                            this.forceUpdate();
-                        }}
-                    />
-                    <br/>
-                    <label htmlFor="checkboxSetMarker">Marker?</label>
-                    <input
-                        type="checkbox"
-                        id="checkboxSetMarker"
-                        checked={theFocusMoment.isMarker}
-                        onChange={() => {
-                            theFocusMoment.setMarker(!theFocusMoment.isMarker);
-                            this.forceUpdate();
-                        }}
-                    />
-
-                </div>
-            ) : (
-                <div className="focus-area">
-                    <p>There is no moment to report on; the focus moment was not found in the list!</p>
-                </div>
-            );
-
-        const theContent = (this.state.storyMode === "scrubber") ? momentsArea : focusArea;
+        //  const theContent = (this.state.storyMode === "scrubber") ? momentsArea : focusArea;
+        const theContent = momentsArea;
         const theStoryPanelStyle = (this.state.storyMode === "scrubber") ? "story-panel-wide" : "story-panel-tall";
         const controlArea = (this.state.storyMode === "scrubber") ? scrubberControlArea : focusControlArea;
         return (
@@ -787,20 +710,18 @@ class DataStories
                             console.log(kPluginName + ' has ID ' + thePluginID);
                         }
                     });
-
                     const positionValues = "{left: 8, top: 222}";       //  'bottom'
                     const adjustPluginMessage = {
                         'action': 'update',
                         'resource': 'component[' + thePluginID + ']',
-                        'values': {/* 'position': positionValues, */ 'cannotClose': true}
+                        'values': {'position': positionValues, 'cannotClose': true}
                     };
-
+                    //  console.log('trying to adjust the plugin with ' + JSON.stringify(adjustPluginMessage));
                     codapInterface.sendRequest(adjustPluginMessage).then(
                         (res) => {
-                            //  console.log('Adjust plugin result: ' + JSON.stringify(res));
+                            console.log('Adjust plugin result: ' + JSON.stringify(res));
                         }
                     );
-
                 }
             );
         } catch (err) {
