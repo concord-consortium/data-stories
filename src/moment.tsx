@@ -6,24 +6,18 @@ interface IStringKeyedObject {
 }
 */
 
-export class Moment {
-
-	public ID: number = -1;     //  todo: do we need this at all?
-	public prev: Moment | null = null;
-	public next: Moment | null = null;
+export class MomentModel {
+	public	ID : number = 0;
+	public prev: MomentModel | null = null;
+	public next: MomentModel | null = null;
 	//  public codapStateDiff: [number, object][] = [];
 	public codapState: object = {};
 
 	public isMarker: boolean = false;
 	public title: string = "";
-	public created: Date;
+	public created: Date = new Date();
+	public modified: Date = new Date();
 	public narrative: any = "";
-
-	constructor(iState: any) {
-		this.codapState = iState;
-		this.setTitle("moment");
-		this.created = new Date();
-	}
 
 	createStorage() {
 		return {
@@ -35,7 +29,7 @@ export class Moment {
 			narrative: this.narrative
 		}
 	}
-	
+
 	restoreFromStorage(iStorage: any) {
 		this.ID = iStorage.ID;
 		this.codapState = iStorage.codapState;
@@ -58,9 +52,11 @@ export class Moment {
 		this.title = iTitle;
 	}
 
+/*
 	setMarker(iMarker: boolean) {
 		this.isMarker = iMarker;
 	}
+*/
 
 	setNarrative(iText: string) {
 		this.narrative = iText;
@@ -73,9 +69,10 @@ export class Moment {
 			return "(txt) " + this.narrative;
 		}
 	}
+
 }
 
-export function MomentView(props: any) {
+export function Moment(props: any) {
 	let theClasses = " story-child marker";
 	if (props.isCurrent) theClasses += " current";
 	if (props.hasNoCodapState) theClasses += " unsavedMoment";

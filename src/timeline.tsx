@@ -1,18 +1,19 @@
 //  import jiff from "jiff";
+import {MomentModel} from "./moment";
 import {Moment} from "./moment";
 import React, {Component} from 'react';
 
 
 export class Timeline {
-    private moments: Moment[] = [];
-    public currentMoment: Moment | null = null;
-    public dstMoment: Moment = new Moment(null);
-    public srcMoment: Moment = new Moment(null);
-    public startingMoment: Moment | null = null;
+    private moments: MomentModel[] = [];
+    public currentMoment: MomentModel | null = null;
+    public dstMoment: MomentModel = new MomentModel();
+    public srcMoment: MomentModel = new MomentModel();
+    public startingMoment: MomentModel | null = null;
     private parent: any;
     //	public initialCodapState: object | null = null;
     private nextMomentID: number = 0;
-    private momentBeingDragged: Moment | null = null;
+    private momentBeingDragged: MomentModel | null = null;
 
     private kInitialJSONText = "{\"object\":\"value\",\"document\":{\"children\":[{\"type\":\"paragraph\",\"children\":[{\"text\":\"What did you do? Why did you do it?\"}]},{\"type\":\"paragraph\",\"children\":[{\"text\":\"¿Qué hizo? ¿Por qué?\"}]}],\"objTypes\":{\"paragraph\":\"block\"}}}";
     private kInitialJSONText_start = "{\"object\":\"value\",\"document\":{\"children\":[{\"type\":\"paragraph\",\"children\":[{\"text\":\"This is the beginning of your data story.\"}]},{\"type\":\"paragraph\",\"children\":[{\"text\":\"Esto es el comienzo de su cuento de datos.\"}]}],\"objTypes\":{\"paragraph\":\"block\"}}}";
@@ -48,14 +49,14 @@ export class Timeline {
 
         return {
             moments: tMomentArray,
-            nextMomentID : this.nextMomentID,
-            currentMomentIndex : tCurrMomentIndex,
+            nextMomentID: this.nextMomentID,
+            currentMomentIndex: tCurrMomentIndex,
         }
     }
 
     restoreFromStorage(iStorage: any) {
         let this_ = this,
-            tCurrMoment: Moment | null = null;
+            tCurrMoment: MomentModel | null = null;
         this.startingMoment = null;
         this.currentMoment = null;
         if (iStorage) {
@@ -65,7 +66,8 @@ export class Timeline {
         if (!(iStorage && iStorage.moments))
             return;
         iStorage.moments.forEach((iMomentStorage: any, iIndex: Number) => {
-            let tMoment = new Moment(iMomentStorage.codapState);
+            let tMoment = new MomentModel();
+            //  tMoment.setCodapState(iMomentStorage.codapState);       //  redundant with next line? I think so.
             tMoment.restoreFromStorage(iMomentStorage);
             if (!this_.startingMoment) {
                 this_.startingMoment = tMoment;
@@ -94,11 +96,11 @@ export class Timeline {
      */
 
 
-            momentByID(iID: number): Moment {
-                    return this.moments.find(function (xSE) {
-                            return xSE.ID === iID
-                    }) as Moment;
-            }
+    momentByID(iID: number): MomentModel {
+        return this.moments.find(function (xSE) {
+            return xSE.ID === iID
+        }) as MomentModel;
+    }
 
 
     /**
@@ -107,14 +109,14 @@ export class Timeline {
      * @param iMoment   the moment being clicked on
      */
 
-    handleDragStart(e: React.DragEvent, iMoment: Moment) {
+    handleDragStart(e: React.DragEvent, iMoment: MomentModel) {
         this.momentBeingDragged = iMoment;
     }
 
-    handleDrop(x: number): Moment | null {
-        let insertAfterThisMoment: Moment | null = null;     //  We will insert the dropped moment after this one.
+    handleDrop(x: number): MomentModel | null {
+        let insertAfterThisMoment: MomentModel | null = null;     //  We will insert the dropped moment after this one.
 
-        if (this.momentBeingDragged instanceof Moment) {
+        if (this.momentBeingDragged instanceof MomentModel) {
             this.currentMoment = this.momentBeingDragged;
             console.log("Dropping [" + this.momentBeingDragged.title + "] ");
             console.log(this.getMomentSummary());
@@ -122,7 +124,7 @@ export class Timeline {
             let done: boolean = false;
 
             if (insertAfterThisMoment) {
-                let ixMoment: Moment = insertAfterThisMoment;   //      index for list traversal
+                let ixMoment: MomentModel = insertAfterThisMoment;   //      index for list traversal
 
                 while (!done) {
                     //  calculate position of the ixMoment box on the screen
@@ -153,7 +155,7 @@ export class Timeline {
                 this.currentMoment = this.momentBeingDragged;   //  restore currentMoment, which was destroyed in the remove
             }
         }
-        const returnValue: Moment | null = this.momentBeingDragged;
+        const returnValue: MomentModel | null = this.momentBeingDragged;
         this.momentBeingDragged = null;
 
         console.log(this.getMomentSummary());
@@ -171,9 +173,9 @@ export class Timeline {
      *
      * @param iMoment
      */
-    removeMoment(iMoment: Moment | null) {
+    removeMoment(iMoment: MomentModel | null) {
         if (iMoment) {
-            const theDoomedMoment: Moment = iMoment;
+            const theDoomedMoment: MomentModel = iMoment;
             const predecessor = theDoomedMoment.prev;
             const successor = theDoomedMoment.next;
 
@@ -210,7 +212,7 @@ export class Timeline {
      * @param newMoment    moment to insert
      * @param previousMoment  moment after which to insert it.
      */
-    insertMomentAfterMoment(newMoment: Moment, previousMoment: Moment | null) {
+    insertMomentAfterMoment(newMoment: MomentModel, previousMoment: MomentModel | null) {
         let subsequentMoment;
 
         if (previousMoment) {
@@ -255,7 +257,7 @@ export class Timeline {
      *
      * @param iCodapState
      */
-    makeNewMomentUsingCodapState(iCodapState: any): Moment {
+    makeNewMomentUsingCodapState(iCodapState: any): MomentModel {
         /*
                 if (!this.initialCodapState) {		//		is this the first marker? A new state?
                     this.moments = [];      //  blank the moment array
@@ -263,7 +265,9 @@ export class Timeline {
                 }
         */
 
-        let tNewMoment: Moment = new Moment(iCodapState);
+        let tNewMoment: MomentModel= new MomentModel();
+        tNewMoment.setCodapState(iCodapState);
+
         tNewMoment.ID = this.nextMomentID;    //  will be zero if this is new.
         this.nextMomentID += 1;     // the global number of IDs we have. Not moments.length in case of deletions.
 
