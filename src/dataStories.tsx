@@ -237,7 +237,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
             //  we are now guaranteed that srcMoemnt and dstMoment are Moments, not null.
 
             const qSaveChanges =
-                `You have ${gChangeCount} change${gChangeCount === 1 ? "" : "s"}. ` +
+                `You have made ${gChangeCount === 1 ? "a change" : "some changes"}. ` +
                 `Would you like to save ${gChangeCount === 1 ? "it" : "them"} in [${this.timeline.getCurrentMomentTitle()}]?`;
             const qChangesStayOnScreen = `The new moment you're making will be called [${this.timeline.dstMoment.title}]. ` +
                 `Would you like these changes to appear in [${this.timeline.dstMoment.title}]?`;

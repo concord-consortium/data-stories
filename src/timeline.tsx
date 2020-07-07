@@ -1,6 +1,5 @@
 //  import jiff from "jiff";
 import {MomentModel} from "./moment";
-import {Moment} from "./moment";
 import React, {Component} from 'react';
 
 
