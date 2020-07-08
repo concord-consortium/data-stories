@@ -159,14 +159,22 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                 gNarrativeBoxID = theID;
 
             } else {
-                const this_ = this;
-                setTimeout(function () {
-                    if (!this_.timeline.startingMoment) {
-                        this_.makeInitialMomentAndTextComponent();
-                    } else {
-                        this_.forceUpdate();
-                    }
-                }, kInitialMomentStartDelay);
+                if (!this.timeline.startingMoment) {
+                    this.makeInitialMomentAndTextComponent();
+                } else {
+                    this.forceUpdate();
+                }
+
+                /*
+                                const this_ = this;
+                                setTimeout(function () {
+                                    if (!this_.timeline.startingMoment) {
+                                        this_.makeInitialMomentAndTextComponent();
+                                    } else {
+                                        this_.forceUpdate();
+                                    }
+                                }, kInitialMomentStartDelay);
+                */
             }
         }
 
@@ -176,6 +184,9 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         console.log("Initial clear() completed. Initial mode is " + this.state.storyMode);
     }
 
+    /**
+     * Called from the constructor if there is no existing narrative text box
+     */
     async makeInitialMomentAndTextComponent(): Promise<void> {
         const tMoment = this.timeline.makeNewMomentUsingCodapState(null);   //  the unsaved moment has no state yet
 
@@ -406,7 +417,6 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
     /**
      * Asks CODAP to restore itself to the given state.
      * Note: sets restoreInProgress while it's running and resolving its promises
-     * todo: should this be async?
      * @param iCodapState    the state to restore to; this is the potentially large JSON object
      */
     private async restoreCodapState(iCodapState: object | null): Promise<any> {
@@ -565,7 +575,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
             </div>
         );
 
-        const focusButtonGuts = (this.state.storyMode === "scrubber") ? kMagnifyingGlass : "back to timeline";
+        //  const focusButtonGuts = (this.state.storyMode === "scrubber") ? kMagnifyingGlass : "back to timeline";
         const scrubberControlArea = (
             <div id="controlArea" className="control-area">
                 {/*   delete button */}
@@ -587,9 +597,10 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
             </div>
         );
 
+/*
         const focusControlArea = (
             <div id="controlArea" className="control-area">
-                {/*  start with the Focus button */}
+                {/!*  start with the Focus button *!/}
                 <div className="story-child tool"
                      onClick={this.changeStoryMode}
                      title={"press to focus on the current moment"}
@@ -599,6 +610,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
 
             </div>
         );
+*/
 
         /*
         Loop over all [story] moments; make a Moment for each.
@@ -649,7 +661,8 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         //  const theContent = (this.state.storyMode === "scrubber") ? momentsArea : focusArea;
         const theContent = momentsArea;
         const theStoryPanelStyle = (this.state.storyMode === "scrubber") ? "story-panel-wide" : "story-panel-tall";
-        const controlArea = (this.state.storyMode === "scrubber") ? scrubberControlArea : focusControlArea;
+        //  const controlArea = (this.state.storyMode === "scrubber") ? scrubberControlArea : focusControlArea;
+        const controlArea = scrubberControlArea;
         return (
             <div className={theStoryPanelStyle}>
                 {controlArea}
