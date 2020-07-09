@@ -6,6 +6,7 @@ import {MomentModel, Moment} from './moment';
 //  import Swal from 'sweetalert2';
 import './dataStories.css';
 
+import infoImage from "./art/info.png";
 import shutterImage from "./art/shutter.png";
 import {isMainThread} from "worker_threads";
 
@@ -33,15 +34,6 @@ const kInitialTallDimensions = {
     height: 555
 };
 
-function Credits(props: any) {
-    return (
-        <div id={"credits"}>
-            <div>Some icons made by <a href="https://www.flaticon.com/authors/fjstudio"
-                                       title="fjstudio">fjstudio</a> from <a href="https://www.flaticon.com/"
-                                                                             title="Flaticon">www.flaticon.com</a></div>
-        </div>
-    )
-}
 
 function putTextComponentInfoIntoCodapState(info: any, iState: any): void {
     const theComponents = iState.components;
@@ -101,8 +93,8 @@ function resetChangeCount(): void {
 }
 
 /**
- * Determine is we need a fresh narrative text box.
- * Returns false if one already exists
+ * Determine if we need a fresh narrative text box.
+ * Returns the ID of the text box, 0 if not found.
  */
 async function needNarrativeTextBox(): Promise<number> {
     const theMessage = {action: "get", resource: "componentList"};
@@ -122,12 +114,12 @@ async function needNarrativeTextBox(): Promise<number> {
     return need;
 }
 
-//  window.onload = makeInitialNarrativeTextBox;
 
 class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { numNotifications: number, stateID: number, storyMode: string }> {
     private timeline: Timeline = new Timeline(this);
     private restoreInProgress = false;
     private waitingForDocumentState = false;
+    private editingCurrentMoment = true;
     private saveStateInSrcMoment = false;
     private saveStateInDstMoment = false;
 
@@ -141,6 +133,8 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         this.handleUpdateCurrentMoment = this.handleUpdateCurrentMoment.bind(this);
         this.handleRevertCurrentMoment = this.handleRevertCurrentMoment.bind(this);
         this.handleMakeNewMomentButtonPress = this.handleMakeNewMomentButtonPress.bind(this);
+        this.handleSaveCurrentMomentButtonPress = this.handleSaveCurrentMomentButtonPress.bind(this);
+        this.handleGetHelp = this.handleGetHelp.bind(this);
         this.getPluginState = this.getPluginState.bind(this);
         this.restorePluginState = this.restorePluginState.bind(this);
 
@@ -153,32 +147,31 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
          * otherwise the text box will not be in that Moment's codapState.
          */
 
-        needNarrativeTextBox().then( (theID) => {
-            if (theID)  {   //  there is a text box with a nonzero ID
-                console.log(`StoryArea constructor: initial text box found with ID ${theID}`);
-                gNarrativeBoxID = theID;
+        needNarrativeTextBox().then((theID) => {
+                if (theID) {   //  there is a text box with a nonzero ID
+                    console.log(`StoryArea constructor: initial text box found with ID ${theID}`);
+                    gNarrativeBoxID = theID;
 
-            } else {
-                if (!this.timeline.startingMoment) {
-                    this.makeInitialMomentAndTextComponent();
                 } else {
-                    this.forceUpdate();
+                    if (!this.timeline.startingMoment) {
+                        this.makeInitialMomentAndTextComponent();
+                    } else {
+                        this.forceUpdate();
+                    }
+
+                    /*
+                                    const this_ = this;
+                                    setTimeout(function () {
+                                        if (!this_.timeline.startingMoment) {
+                                            this_.makeInitialMomentAndTextComponent();
+                                        } else {
+                                            this_.forceUpdate();
+                                        }
+                                    }, kInitialMomentStartDelay);
+                    */
                 }
-
-                /*
-                                const this_ = this;
-                                setTimeout(function () {
-                                    if (!this_.timeline.startingMoment) {
-                                        this_.makeInitialMomentAndTextComponent();
-                                    } else {
-                                        this_.forceUpdate();
-                                    }
-                                }, kInitialMomentStartDelay);
-                */
             }
-        }
-
-    )
+        )
 
         //  Swal.fire('Hello, Tim!');
         console.log("Initial clear() completed. Initial mode is " + this.state.storyMode);
@@ -243,6 +236,19 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
     restorePluginState(iStorage: any) {
         this.timeline.restoreFromStorage(iStorage);
         this.forceUpdate();
+    }
+
+    handleSaveCurrentMomentButtonPress(e : MouseEvent) {
+        e.stopPropagation();
+
+        if (this.timeline.currentMoment) {
+            this.timeline.srcMoment = this.timeline.dstMoment = this.timeline.currentMoment;
+            this.saveStateInSrcMoment = true;
+            this.requestDocumentState();
+            console.log(`Explicitly saved [${this.timeline.currentMoment.title}] in saveCurrentMoment`);
+        } else {
+            alert(`Hmmm. There is no current moment to save`);
+        }
     }
 
     doBeginChangeToNewMoment(iMoment: MomentModel | null) {
@@ -312,6 +318,8 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
     private receiveNewDocumentState(iCommand: any): void {
         if (this.waitingForDocumentState) {
             this.waitingForDocumentState = false;
+            console.log(`received a document state we were waiting for`);
+
             if (this.saveStateInSrcMoment) {
                 this.matchMomentToCODAPState(this.timeline.srcMoment, iCommand.values.state, false);
             }
@@ -319,6 +327,9 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                 this.matchMomentToCODAPState(this.timeline.dstMoment, iCommand.values.state, true);
             }
             this.doEndChangeToNewMoment();
+        } else {
+            console.log(`received a document state --- but we were not waiting for one`);
+
         }
     }
 
@@ -342,7 +353,9 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
      * So we need the state from CODAP itself.
      * We actually receive the state in handleNotification(). This just makes the request.
      */
-    public handleMakeNewMomentButtonPress(): void {
+    public handleMakeNewMomentButtonPress(e : MouseEvent) {
+        e.stopPropagation();
+        console.log(`handleMakeNewMomentButtonPress`);
         this.doBeginChangeToNewMoment(null);
     }
 
@@ -356,8 +369,8 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
     private async matchMomentToCODAPState(iMoment: MomentModel | null, iState: object, preserveMomentInfo: boolean): Promise<void> {
         const tTextBoxInfo: any = getNarrativeBoxInfoFromCodapState(iState);
         if (iMoment instanceof MomentModel) {
-            console.log(`Setting [${iMoment.title}] to match a state (text comp title is ${tTextBoxInfo.title})... 
-            \n    before update: ${iMoment.toString()}`)
+            console.log(`Setting [${iMoment.title}] to match a state (text comp title is [${tTextBoxInfo.title}])...`);
+            //          \n    before update: ${iMoment.toString()}`)
             iMoment.setCodapState(iState);
             iMoment.modified = new Date();
 
@@ -370,9 +383,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                 iMoment.setTitle(tTextBoxInfo.title);
                 iMoment.setNarrative(tTextBoxInfo.narrative);
             }
-
-
-            console.log(`    after update: ${iMoment.toString()}`)
+            //  after-update console log used to be here
         } else {
             console.log(`Hmmm. Tried to update a non-Moment in updateMoment(): ${JSON.stringify(iMoment)}`)
         }
@@ -390,11 +401,9 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
             gChangeCount++;
             console.log(`change count: ${gChangeCount}`);
         } else {
-            console.log(`  notification! ${iCommand.resource} op ${iCommand.values.operation}`);
+            console.log(`  notification! Resource: ${iCommand.resource}, operation: ${iCommand.values.operation}`);
             if (iCommand.values.operation === 'newDocumentState') {
-                if (this.waitingForDocumentState) {
-                    this.receiveNewDocumentState(iCommand);
-                }
+                this.receiveNewDocumentState(iCommand);
             } else if (iCommand.values.operation === 'titleChange') {
                 const textBoxComponentResourceString = `component[${gNarrativeBoxID}]`;
                 if (iCommand.resource === textBoxComponentResourceString) {
@@ -437,6 +446,10 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         return out;
     }
 
+    public handleGetHelp() {
+        alert("You get help!");
+    }
+
     /**
      * Handles a user click on a moment in the timeline.
      *
@@ -445,7 +458,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
      */
     public async handleMomentClick(e: MouseEvent, iMoment: MomentModel) {
         if (iMoment) {
-            console.log(`Click on [${iMoment.title}]`);
+            console.log(`Click on [${iMoment.title}] in handleMomentClick`);
             this.doBeginChangeToNewMoment(iMoment);
         }
     }
@@ -578,39 +591,58 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         //  const focusButtonGuts = (this.state.storyMode === "scrubber") ? kMagnifyingGlass : "back to timeline";
         const scrubberControlArea = (
             <div id="controlArea" className="control-area">
+                <InfoButton onClick={(e: MouseEvent) => this_.handleGetHelp()} />
+                <DeleteButton onClick={(e: MouseEvent) => this_.handleDeleteCurrentMoment()} />
+                <NewMomentButton onClick={(e: MouseEvent) => this_.handleMakeNewMomentButtonPress(e)} />
+
+                    {/*   info button */}
+{/*
+                <div id="infoButton"
+                     className="story-child tool icon-button"
+                     onClick={e => this_.handleGetHelp()}
+                     title={"press to get some instructions"}
+                >
+                    <img width={"28"} src={infoImage}></img>
+                </div>
+*/}
+
                 {/*   delete button */}
+{/*
                 <div id="deleteButton"
                      className="story-child tool icon-button"
-                     onClick={this.handleDeleteCurrentMoment}
+                     onClick={e => this_.handleDeleteCurrentMoment()}
                      title={"press to delete the current moment"}
                 >
                     {kTrashCan}
                 </div>
+*/}
 
                 {/*		this is the shutter button, for making a new marker		*/}
+{/*
                 <div className="story-child tool icon-button"
-                     onClick={this.handleMakeNewMomentButtonPress}
+                     onClick={(e: MouseEvent) => this_.handleMakeNewMomentButtonPress(e)}
                      title={"capture this moment"}
                 >
-                    <img width={"28"} src={shutterImage}></img>
+                    <img width={"28"} src={shutterImage} alt={"snap!"}/>
                 </div>
+*/}
             </div>
         );
 
-/*
-        const focusControlArea = (
-            <div id="controlArea" className="control-area">
-                {/!*  start with the Focus button *!/}
-                <div className="story-child tool"
-                     onClick={this.changeStoryMode}
-                     title={"press to focus on the current moment"}
-                >
-                    {focusButtonGuts}
-                </div>
+        /*
+                const focusControlArea = (
+                    <div id="controlArea" className="control-area">
+                        {/!*  start with the Focus button *!/}
+                        <div className="story-child tool"
+                             onClick={this.changeStoryMode}
+                             title={"press to focus on the current moment"}
+                        >
+                            {focusButtonGuts}
+                        </div>
 
-            </div>
-        );
-*/
+                    </div>
+                );
+        */
 
         /*
         Loop over all [story] moments; make a Moment for each.
@@ -624,8 +656,12 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         /*
                 Then we loop through that new Array to make the Moment widgets
         */
+
+        let tMomentNumber = 0;
+
         const theMoments = momentsOnThisTimeline.map(
             (aMoment) => {
+                tMomentNumber++;
                 return (
                     <Moment
                         key={aMoment.ID}
@@ -635,9 +671,14 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                                 this_.timeline.handleDragStart(e, aMoment)
                         }
                         onClick={(e: MouseEvent) => this_.handleMomentClick(e, aMoment)}
+                        onDelete={(e: MouseEvent) => this_.handleDeleteCurrentMoment()}
+                        onRevert={(e: MouseEvent) => this_.handleRevertCurrentMoment()}
+                        onNewMoment={(e: MouseEvent) => this_.handleMakeNewMomentButtonPress(e)}
+                        onSaveMoment={(e: MouseEvent) => this_.handleSaveCurrentMomentButtonPress(e)}
                         isCurrent={aMoment === this_.timeline.currentMoment}
                         theText={aMoment.title}
                         hasNoCodapState={(aMoment.codapState === null)}
+                        momentNumber={tMomentNumber}
                     />
                 )
             }
@@ -752,6 +793,45 @@ class DataStories
         );
     }
 
+}
+
+function InfoButton(props : any) {
+    {/*   info button */}
+
+    return (
+        <div id="infoButton"
+             className="story-child tool icon-button"
+             onClick={props.onClick}
+             title={"press to get some instructions"}
+        >
+            <img width={"28"} src={infoImage} alt={"?"} />
+        </div>
+    )
+}
+
+function DeleteButton(props : any) {
+    {/*   info button */}
+
+    return (
+        <div id="deleteButton"
+             className="story-child tool icon-button"
+             onClick={props.onClick}
+             title={"press to delete the current moment"}
+        >
+            {kTrashCan}
+        </div>
+    )
+}
+function NewMomentButton(props : any) {
+    return (
+        <div id="newMomentButton"
+             className="story-child tool icon-button"
+             onClick={props.onClick}
+             title={"press to capture a new moment"}
+        >
+            <img width={"28"} src={shutterImage} alt={"snap!"}/>
+        </div>
+    )
 }
 
 export default DataStories;

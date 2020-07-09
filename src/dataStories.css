@@ -1,19 +1,27 @@
 .App {
     text-align: center;
     background-color: #e8e8e8;
+}
 
-
+:root {
+    --timeline-height : 62px;
+    --moment-full-height : 56px;
+    --moment-button-size : 13px;
+    --moment-regular-width : 52px;
+    --moment-control-zone-height : calc(var(--moment-button-size) + 2px);
 }
 
 .story-panel-wide {
     display: flex;
-    height: 52px;
-    width: 95vw;
+    height: var(--timeline-height);
+    width: 100vw;
     text-align: left;
     border: none;
     overflow: auto;
+    background-color: dodgerblue;
 }
 
+/*
 .story-panel-tall {
     background-color: #ccddee;
     display: flex;
@@ -25,20 +33,20 @@
     border: none;
     overflow: auto;
 }
+*/
 
 .control-area {
     display: flex;
-    height: 48px;
-    /* width : 90vw;    */
+    height: var(--timeline-height);
     text-align: left;
     border: none;
     overflow: auto;
     background-color: #89a;
 }
+
 .story-area {
     display: flex;
-    height: 48px;
-    /* width : 90vw;    */
+    height: var(--timeline-height);
     text-align: left;
     border: none;
     overflow: auto;
@@ -47,17 +55,19 @@
     border-right: 8px solid gray;
 }
 
+/*
 .focus-area {
-    /*
+    !*
     display: flex;
     height: 48px;
     width : 90vw;
-    */
+    *!
     text-align: left;
     border: none;
     overflow: auto;
     font-size: 11px;
 }
+*/
 
 .message {
     width: 72px;
@@ -70,31 +80,109 @@
     /*flex-grow: 1;*/
     /*word-wrap: break-word;*/
     border-radius: 8px;
-    height: 32px;
-    text-align: left;
-    font-size: 9px;
+    height: var(--moment-full-height);
     /*border: 1px solid #000;*/
     overflow: hidden; /*  was auto    */
     cursor: pointer;
-    margin: 2px;
-    padding: 4px;
     user-select: none;
+    margin: 2px;
 }
 
 .marker {
-    width: 40px;
+    height: var(--moment-full-height);
+    width: var(--moment-regular-width);
     background-color: #bcd; /* #9ab;    */
     text-align: center;
+    position: relative;
+    /*
+    because absolute positioning of children requires positioning of parent.
+    In this case, the children are the moment control zone and the moment number.
+     */
 }
 
+.marker .moment-control-zone {
+    display : none;
+}
+.marker:hover .moment-control-zone {
+    display : flex;
+}
+
+/**
+for the current moment
+ */
 .current {
     background-color: #abc;
-    height: 28px;
+    height: calc(var(--moment-full-height) - 4px);
+    width : calc(var(--moment-regular-width) + 2 * var(--moment-button-size));
     border: 2px solid;
+
+    flex : none;    /*  width does not flex when more moments appear    */
 }
 
 .unsavedMoment {
     background-color: #def;
+}
+
+.moment-title-zone {
+    text-align: left;
+    font-size: 9px;
+    padding: 4px;
+    flex : 1;
+}
+
+.moment-control-zone {
+    height : var(--moment-control-zone-height);
+    background-color: white;
+    padding-left: 4px;
+    padding-right: 4px;
+    flex-shrink: 0;
+    position: absolute;
+    bottom : 0;
+    display: flex;
+    width : 100vw;
+}
+
+.moment-button {
+    cursor : pointer;
+    height : var(--moment-button-size);
+    width : var(--moment-button-size);
+    border-radius: calc(var(--moment-button-size) / 2);
+    color : white;
+    background-color: dodgerblue;
+    font-size: calc(var(--moment-button-size) - 2px);
+    font-weight: bold;
+    margin : 1px;
+}
+
+.delete-button {
+    background-color: red;
+}
+
+.revert-button {
+    background-color: darkgrey;
+}
+
+.new-moment-button {
+    background-color: darkgreen;
+}
+
+.save-moment-button {
+    background-color: darkblue;
+}
+
+.moment-number {
+    position : absolute;
+
+    bottom : 0;
+    right : 0;
+
+    height : var(--moment-control-zone-height);
+    width : calc(1.5 * var(--moment-button-size));
+    font-size: calc(var(--moment-button-size) - 2px);
+
+    background-color: brown;
+    color : yellow;
+    border-top-left-radius: 8px;
 }
 
 .tool {
@@ -106,15 +194,19 @@
 
 .icon-button {
     font-size: 20px;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 4px;
+    padding-bottom: 0;
+    /*
+    padding: 8px;
+    */
 }
 
 .container-drag {
     background-color: #def;
 }
 
-#updateButton, #revertButton {
-    font-size: small;
-}
 .userChoiceDialog {
     position: fixed;
     display: block;
