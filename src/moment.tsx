@@ -77,16 +77,29 @@ export function Moment(props: any) {
     if (props.isCurrent) theClasses += " current";
     if (props.hasNoCodapState) theClasses += " unsavedMoment";
 
-    const controlZoneGuts = props.isCurrent ?
-		(
-			<div className={"moment-control-zone"}>
-				<DeleteButton onDelete = {props.onDelete} />
-				<RevertButton onRevert = {props.onRevert} />
-				<SaveButton onSaveMoment = {props.onSaveMoment} />
-				<NewMomentButton onNewMoment = {props.onNewMoment} />
-			</div>
-		) :
-		"";
+    const controlZoneGuts = props.isCurrent && !props.editingTitle ?
+        (
+            <div className={"moment-control-zone"}>
+                <DeleteButton onDelete={props.onDelete}/>
+                <RevertButton onRevert={props.onRevert}/>
+                <SaveButton onSaveMoment={props.onSaveMoment}/>
+                <NewMomentButton onNewMoment={props.onNewMoment}/>
+            </div>
+        ) :
+        "";
+
+    const titleZoneGuts = props.editingTitle ?
+        (<textarea
+                className={"moment-title-zone title-editor"}
+                onBlur={props.onTitleEditBlur}
+            >
+                {props.theText}
+            </textarea>
+        )
+        :
+        (<div className={"moment-title-zone"}>
+            {props.theText}
+        </div>);
 
     return (
         <div id={"DSMarker" + props.id}
@@ -96,58 +109,56 @@ export function Moment(props: any) {
              onClick={props.onClick}
              title={props.theText}
         >
-			<div className={"moment-title-zone"}>
-                {props.theText}
-            </div>
-			<MomentNumber theNumber = {props.momentNumber}/>
-			{controlZoneGuts}
+            {titleZoneGuts}
+            <MomentNumber theNumber={props.momentNumber}/>
+            {controlZoneGuts}
         </div>
     );
 }
 
 function MomentNumber(props: any) {
-	return(
-		<div className={"moment-number"}>{props.theNumber}</div>
-	)
+    return (
+        <div className={"moment-number"}>{props.theNumber}</div>
+    )
 }
 
-function NewMomentButton(props:any) {
-	return(
-		<div
-			className="moment-button new-moment-button"
-			onClick={props.onNewMoment}
-			title={"Make a new moment"}
-		>+</div>
-	)
+function NewMomentButton(props: any) {
+    return (
+        <div
+            className="moment-button new-moment-button"
+            onClick={props.onNewMoment}
+            title={"Make a new moment"}
+        >+</div>
+    )
 }
 
-function SaveButton(props:any) {
-	return(
-		<div
-			className="moment-button save-moment-button"
-			onClick={props.onSaveMoment}
-			title={"Save this moment"}
-		>√</div>
-	)
+function SaveButton(props: any) {
+    return (
+        <div
+            className="moment-button save-moment-button"
+            onClick={props.onSaveMoment}
+            title={"Save this moment"}
+        >√</div>
+    )
 }
 
-function DeleteButton(props:any) {
-	return(
-		<div
-			className="moment-button delete-button"
-			onClick={props.onDelete}
-			title={"Delete this moment"}
-		>X</div>
-	)
+function DeleteButton(props: any) {
+    return (
+        <div
+            className="moment-button delete-button"
+            onClick={props.onDelete}
+            title={"Delete this moment"}
+        >X</div>
+    )
 }
 
-function RevertButton(props:any) {
-	return(
-		<div
-			className="moment-button revert-button"
-			onClick={props.onDelete}
-			title={"Revert! Discard all changes!"}
-		>R</div>
-	)
+function RevertButton(props: any) {
+    return (
+        <div
+            className="moment-button revert-button"
+            onClick={props.onDelete}
+            title={"Revert! Discard all changes!"}
+        >R</div>
+    )
 }
 

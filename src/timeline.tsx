@@ -291,6 +291,10 @@ export class Timeline {
         if (theMoment) theMoment.setNarrative(iString);
     }
 
+    /**
+     * Sets the title of the current moment
+     * @param iTitle
+     */
     setNewTitle(iTitle: string): void {
         let theMoment = this.currentMoment;
         if (theMoment) theMoment.setTitle(iTitle);

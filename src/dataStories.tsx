@@ -14,9 +14,9 @@ let gNarrativeBoxID: number = 0;        //  global
 let gChangeCount = 0;
 
 const kPluginName = "Story Builder";
-const kInitialMomentStartDelay = 1200;      //  milliseconds
+//  const kInitialMomentStartDelay = 1200;      //  milliseconds
 const kNarrativeTextBoxName = "WDS-narrative-box";
-const kNarrativeTextBoxTitle = "start ... comienzo";
+//  const kNarrativeTextBoxTitle = "start ... comienzo";
 
 const kMagnifyingGlass = "\ud83d\udd0d";
 const kCheckmark = "\u2714";
@@ -24,7 +24,7 @@ const kTrashCan = "\uD83D\uddd1";
 const kSave = "save";
 const kRevert = "rev";
 
-const kVersion = "0.5";
+const kVersion = "0.51";
 const kInitialWideDimensions = {
     width: 800,
     height: 100
@@ -119,9 +119,9 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
     private timeline: Timeline = new Timeline(this);
     private restoreInProgress = false;
     private waitingForDocumentState = false;
-    private editingCurrentMoment = true;
     private saveStateInSrcMoment = false;
     private saveStateInDstMoment = false;
+    private editingMomentTitle = false;       //  are we editing the title of the currentMoment in place?
 
     constructor(props: any) {
         super(props);
@@ -134,6 +134,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         this.handleRevertCurrentMoment = this.handleRevertCurrentMoment.bind(this);
         this.handleMakeNewMomentButtonPress = this.handleMakeNewMomentButtonPress.bind(this);
         this.handleSaveCurrentMomentButtonPress = this.handleSaveCurrentMomentButtonPress.bind(this);
+        this.handleTitleEditBlur = this.handleTitleEditBlur.bind(this);
         this.handleGetHelp = this.handleGetHelp.bind(this);
         this.getPluginState = this.getPluginState.bind(this);
         this.restorePluginState = this.restorePluginState.bind(this);
@@ -401,7 +402,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
             gChangeCount++;
             console.log(`change count: ${gChangeCount}`);
         } else {
-            console.log(`  notification! Resource: ${iCommand.resource}, operation: ${iCommand.values.operation}`);
+            //  console.log(`  notification! Resource: ${iCommand.resource}, operation: ${iCommand.values.operation}`);
             if (iCommand.values.operation === 'newDocumentState') {
                 this.receiveNewDocumentState(iCommand);
             } else if (iCommand.values.operation === 'titleChange') {
@@ -460,6 +461,13 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         if (iMoment) {
             console.log(`Click on [${iMoment.title}] in handleMomentClick`);
             this.doBeginChangeToNewMoment(iMoment);
+
+            if (iMoment === this.timeline.currentMoment) {
+                this.editingMomentTitle = true;
+                console.log("CLICK on Current Moment");
+            } else {
+                this.editingMomentTitle = false;    //  stop editing when you leave the current moment
+            }
         }
     }
 
@@ -497,6 +505,14 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
 
             this.requestDocumentState();
         }
+    }
+
+    private handleTitleEditBlur( iNewTitle: string ) {
+        console.log(`BLUR: new title is ${iNewTitle}`);
+        this.timeline.setNewTitle(iNewTitle);
+        StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
+        this.editingMomentTitle = false;
+        this.forceUpdate();
     }
 
     private handleDrop(e: React.DragEvent) {
@@ -675,7 +691,9 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                         onRevert={(e: MouseEvent) => this_.handleRevertCurrentMoment()}
                         onNewMoment={(e: MouseEvent) => this_.handleMakeNewMomentButtonPress(e)}
                         onSaveMoment={(e: MouseEvent) => this_.handleSaveCurrentMomentButtonPress(e)}
+                        onTitleEditBlur={(e:React.ChangeEvent<HTMLTextAreaElement>) => this_.handleTitleEditBlur(e.target.value)}
                         isCurrent={aMoment === this_.timeline.currentMoment}
+                        editingTitle={aMoment === this_.timeline.currentMoment && this.editingMomentTitle}
                         theText={aMoment.title}
                         hasNoCodapState={(aMoment.codapState === null)}
                         momentNumber={tMomentNumber}
