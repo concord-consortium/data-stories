@@ -7,6 +7,7 @@
     --timeline-height : 62px;
     --moment-full-height : 52px;
     --moment-button-size : 16px;
+    --moment-number-flag-height : 14px;
     --moment-regular-width : 52px;
     --current-moment-width : calc(var(--moment-regular-width) * 1.6);
     --moment-control-zone-height : calc(var(--moment-button-size) + 2px);
@@ -92,7 +93,7 @@
     padding : 0;
 }
 
-.marker {
+.moment {
     height: var(--moment-full-height);
     width: var(--moment-regular-width);
     background-color: #bcd; /* #9ab;    */
@@ -105,14 +106,9 @@
 
     border : 1px solid;
     padding : 1px;
+    transition: width 0.5s;
 }
 
-.marker .moment-control-zone {
-    display : none;
-}
-.marker:hover .moment-control-zone {
-    display : flex;
-}
 
 /**
 for the current moment
@@ -145,9 +141,22 @@ for the current moment
     padding-right: 4px;
     flex-shrink: 0;
     position: absolute;
+    /*
     bottom : 0;
+    */
     display: flex;
     width : 100vw;
+    transition: 0.5s;
+}
+
+.moment .moment-control-zone {
+    bottom : calc(-1 * var(--moment-control-zone-height));
+    display : flex;     /* was none */
+}
+
+.moment:hover .moment-control-zone {
+    bottom : 0;
+    display : flex;
 }
 
 .moment-button {
@@ -184,9 +193,9 @@ for the current moment
     bottom : 0;
     right : 0;
 
-    height : var(--moment-control-zone-height);
-    width : calc(1.5 * var(--moment-button-size));
-    font-size: calc(var(--moment-button-size) - 2px);
+    height : var(--moment-number-flag-height);
+    width : calc(1.5 * var(--moment-number-flag-height));
+    font-size: calc(var(--moment-number-flag-height) - 2px);
 
     background-color: brown;
     color : yellow;

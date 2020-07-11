@@ -73,7 +73,7 @@ export class MomentModel {
 }
 
 export function Moment(props: any) {
-    let theClasses = " story-child marker";
+    let theClasses = " story-child moment";
     if (props.isCurrent) theClasses += " current";
     if (props.hasNoCodapState) theClasses += " unsavedMoment";
 
