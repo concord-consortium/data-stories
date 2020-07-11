@@ -92,8 +92,11 @@ export function Moment(props: any) {
         (<textarea
                 className={"moment-title-zone title-editor"}
                 onBlur={props.onTitleEditBlur}
+                defaultValue={props.theText}
             >
+{/*
                 {props.theText}
+*/}
             </textarea>
         )
         :
@@ -128,7 +131,7 @@ function NewMomentButton(props: any) {
             className="moment-button new-moment-button"
             onClick={props.onNewMoment}
             title={"Make a new moment"}
-        >+</div>
+        ><i className="fas fa-plus tool-small-icon"></i></div>
     )
 }
 
@@ -138,7 +141,7 @@ function SaveButton(props: any) {
             className="moment-button save-moment-button"
             onClick={props.onSaveMoment}
             title={"Save this moment"}
-        >√</div>
+        ><i className="fas fa-archive tool-small-icon"></i></div>
     )
 }
 
@@ -148,7 +151,7 @@ function DeleteButton(props: any) {
             className="moment-button delete-button"
             onClick={props.onDelete}
             title={"Delete this moment"}
-        >X</div>
+        ><i className="far fa-trash-alt tool-small-icon"></i></div>
     )
 }
 
@@ -158,7 +161,7 @@ function RevertButton(props: any) {
             className="moment-button revert-button"
             onClick={props.onDelete}
             title={"Revert! Discard all changes!"}
-        >R</div>
+        ><i className="fas fa-history tool-small-icon"></i></div>
     )
 }
 

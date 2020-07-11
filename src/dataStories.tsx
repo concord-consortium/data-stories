@@ -20,7 +20,7 @@ const kNarrativeTextBoxName = "WDS-narrative-box";
 
 const kMagnifyingGlass = "\ud83d\udd0d";
 const kCheckmark = "\u2714";
-const kTrashCan = "\uD83D\uddd1";
+const kTrashCan = "🗑";   //    "\uD83D\uddd1";       //  🗑️
 const kSave = "save";
 const kRevert = "rev";
 
@@ -240,6 +240,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
     }
 
     handleSaveCurrentMomentButtonPress(e : MouseEvent) {
+        this.editingMomentTitle = false;        //      just in case
         e.stopPropagation();
 
         if (this.timeline.currentMoment) {
@@ -258,8 +259,10 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
             this.timeline.srcMoment = this.timeline.currentMoment;
 
             if (iMoment) {  //  a destination moment already exists
+                this.editingMomentTitle = false;    //  we do not want to automatically edit one we're moving to
                 this.timeline.dstMoment = iMoment;
             } else {        //  we are making a new moment
+                this.editingMomentTitle = true;    //  we do want to automatically edit the new one
                 this.timeline.dstMoment = this.timeline.makeNewMomentUsingCodapState(null);
                 //  it is not yet the current moment
             }
@@ -408,7 +411,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
             } else if (iCommand.values.operation === 'titleChange') {
                 const textBoxComponentResourceString = `component[${gNarrativeBoxID}]`;
                 if (iCommand.resource === textBoxComponentResourceString) {
-                    console.log(`TITLE changed to "${iCommand.values.to}"`);
+                    console.log(`TITLE changed to "${iCommand.values.to}... change count is ${gChangeCount}"`);
                     this.timeline.setNewTitle(iCommand.values.to);
                     this.forceUpdate();
                 }
@@ -476,6 +479,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
      * User clicks on the trash can
      */
     private handleDeleteCurrentMoment(): void {
+        this.editingMomentTitle = false;        //  just in case
         this.timeline.removeCurrentMoment();    //  also sets a new currentMoment
         this.matchCODAPStateToMoment(this.timeline.currentMoment);
         this.forceUpdate();     //  remove the marker from the bar, point at the current one
@@ -487,6 +491,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
      * Make CODAP revert to the last-saved state associated with the currentMoment.
      */
     private handleRevertCurrentMoment(): void {
+        this.editingMomentTitle = false;        //          just in case!
         this.matchCODAPStateToMoment(this.timeline.currentMoment);
 
         //  this.forceUpdate();     //  in case there's any change
@@ -508,10 +513,10 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
     }
 
     private handleTitleEditBlur( iNewTitle: string ) {
+        this.editingMomentTitle = false;
         console.log(`BLUR: new title is ${iNewTitle}`);
         this.timeline.setNewTitle(iNewTitle);
         StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
-        this.editingMomentTitle = false;
         this.forceUpdate();
     }
 

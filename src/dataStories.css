@@ -6,7 +6,7 @@
 :root {
     --timeline-height : 62px;
     --moment-full-height : 52px;
-    --moment-button-size : 13px;
+    --moment-button-size : 16px;
     --moment-regular-width : 52px;
     --current-moment-width : calc(var(--moment-regular-width) * 1.6);
     --moment-control-zone-height : calc(var(--moment-button-size) + 2px);
@@ -208,6 +208,12 @@ for the current moment
     background-color: gold;
     text-align: center;
     vertical-align: middle;
+}
+
+.tool-small-icon {
+    font-size: 0.8em;
+    position: relative;
+    top: -2px;
 }
 
 .icon-button {

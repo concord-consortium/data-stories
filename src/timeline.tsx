@@ -274,7 +274,7 @@ export class Timeline {
         //  now, in the linked list, insert after the current ID.
         this.insertMomentAfterMoment(tNewMoment, this.currentMoment);
 
-        tNewMoment.title = (tNewMoment.ID === 0) ? "start ... comienzo" : "Moment " + tNewMoment.ID;
+        tNewMoment.title = (tNewMoment.ID === 0) ? "start ... comienzo" : "moment title/título";
         tNewMoment.narrative = tNewMoment.ID ? this.kInitialJSONText : this.kInitialJSONText_start;
         return tNewMoment;
     }
