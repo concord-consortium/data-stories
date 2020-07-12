@@ -115,7 +115,7 @@ async function needNarrativeTextBox(): Promise<number> {
 }
 
 
-class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { numNotifications: number, stateID: number, storyMode: string }> {
+class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { numNotifications: number, stateID: number }> {
     private timeline: Timeline = new Timeline(this);
     private restoreInProgress = false;
     private waitingForDocumentState = false;
@@ -125,10 +125,10 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
 
     constructor(props: any) {
         super(props);
-        this.state = {numNotifications: 0, stateID: -1, storyMode: 'scrubber'};
+        this.state = {numNotifications: 0, stateID: -1};
 
         this.handleNotification = this.handleNotification.bind(this);
-        this.changeStoryMode = this.changeStoryMode.bind(this);
+        //  this.changeStoryMode = this.changeStoryMode.bind(this);
         this.handleDeleteCurrentMoment = this.handleDeleteCurrentMoment.bind(this);
         this.handleUpdateCurrentMoment = this.handleUpdateCurrentMoment.bind(this);
         this.handleRevertCurrentMoment = this.handleRevertCurrentMoment.bind(this);
@@ -175,7 +175,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         )
 
         //  Swal.fire('Hello, Tim!');
-        console.log("Initial clear() completed. Initial mode is " + this.state.storyMode);
+        //  console.log("Initial clear() completed. Initial mode is " + this.state.storyMode);
     }
 
     /**
@@ -579,6 +579,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
      * Change the shape of the Iframe, then change the (React) state;
      * then, on render(), actually display different material (e.g., detailed info on a moment when `state.storyMode` is `scrubber`.)
      */
+/*
     private changeStoryMode(): void {
 
         const newMode = (this.state.storyMode === 'focus') ? 'scrubber' : 'focus';
@@ -594,6 +595,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         this.setState({storyMode: newMode});
     }
 
+*/
 
     public render() {
         let this_ = this;
@@ -724,7 +726,8 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
 
         //  const theContent = (this.state.storyMode === "scrubber") ? momentsArea : focusArea;
         const theContent = momentsArea;
-        const theStoryPanelStyle = (this.state.storyMode === "scrubber") ? "story-panel-wide" : "story-panel-tall";
+        const theStoryPanelStyle =  "story-panel-wide";
+        //  const theStoryPanelStyle = (this.state.storyMode === "scrubber") ? "story-panel-wide" : "story-panel-tall";
         //  const controlArea = (this.state.storyMode === "scrubber") ? scrubberControlArea : focusControlArea;
         const controlArea = scrubberControlArea;
         return (
