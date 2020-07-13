@@ -24,7 +24,7 @@ const kTrashCan = "🗑";   //    "\uD83D\uddd1";       //  🗑️
 const kSave = "save";
 const kRevert = "rev";
 
-const kVersion = "0.51";
+const kVersion = "0.52";
 const kInitialWideDimensions = {
     width: 800,
     height: 100
