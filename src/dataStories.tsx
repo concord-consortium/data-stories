@@ -97,15 +97,21 @@ function resetChangeCount(): void {
  * Returns the ID of the text box, 0 if not found.
  */
 async function needNarrativeTextBox(): Promise<number> {
-    const theMessage = {action: "get", resource: "componentList"};
-    const theResult: any = await codapInterface.sendRequest(theMessage);
     let need: number = 0;
+
+    const theMessage = {action: "get", resource: "componentList"};
+    const theResult: any = await codapInterface.sendRequest(theMessage)
+        .catch(()=>{
+            console.log(`••• problem finding out about the component list`);
+            return need;
+        });
+
 
     if (theResult.success) {
         theResult.values.forEach((c: any) => {
             if (c.name === kNarrativeTextBoxName) {
                 if (c.type === 'text') {
-                    need = c.id;
+                    need = c.id as number;
                 }
             }
         })
@@ -185,7 +191,11 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         const tMoment = this.timeline.makeNewMomentUsingCodapState(null);   //  the unsaved moment has no state yet
 
         //  make initial text box
-        const tNarrativeID: number = await needNarrativeTextBox();
+        const tNarrativeID: number = await needNarrativeTextBox()
+            .catch(()=>{
+                console.log(`••• problem finding out about the narrative text box`);
+                return 0;
+            });
 
         if (tNarrativeID) {
             gNarrativeBoxID = tNarrativeID;
@@ -204,7 +214,8 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                 }
             };
 
-            const tResult: any = await codapInterface.sendRequest(theMessage);
+            const tResult: any = await codapInterface.sendRequest(theMessage)
+                .catch(()=>{console.log(`••• problem creating the narrative text box`)});
             if (tResult.success) {
                 gNarrativeBoxID = tResult.values.id;
                 console.log(`StoryArea.makeInitialMomentAndTextComponent: Text box id ${gNarrativeBoxID} created.`);
@@ -214,7 +225,8 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         //      at this point, `tMoment.codapState` is still null.
 
         this.timeline.currentMoment = tMoment;
-        await StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
+        await StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment)
+            .catch(()=>{console.log(`••• problem displaying the narrative in the text box`)});
 
         this.forceUpdate();     //  make the moment appear on the screen in the bar
     }
@@ -312,6 +324,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
     private requestDocumentState(): void {
         this.waitingForDocumentState = true;
         codapInterface.sendRequest({action: 'get', resource: 'document'});
+        console.log(`Requesting a document state, currentMoment is [${this.timeline.getCurrentMomentTitle()}]`)
     }
 
     /**
@@ -341,8 +354,12 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
 
         this.timeline.currentMoment = this.timeline.dstMoment;
 
-        await this.matchCODAPStateToMoment(this.timeline.currentMoment);
-        await StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
+        await this.matchCODAPStateToMoment(this.timeline.currentMoment)
+            .catch(()=>{console.log(`••• problem matching the codap state 
+            to [${this.timeline.getCurrentMomentTitle()}]`)});
+        await StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment)
+            .catch(()=>{console.log(`••• problem diaplaying the narrative 
+            for [${this.timeline.getCurrentMomentTitle()}] in the text box`)});;
 
         this.forceUpdate();
         console.log(this.timeline.getMomentSummary());
@@ -421,10 +438,12 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         }
     }
 
-
     private async matchCODAPStateToMoment(iMoment: MomentModel | null) {
         const newState = (iMoment) ? iMoment.codapState : null;
-        this.restoreCodapState(newState);
+        const tMomentID = (iMoment) ? iMoment.ID : "null";  //  for catch error reporting
+
+        await this.restoreCodapState(newState)
+            .catch(() => console.log(`••• caught matching CODAP state to moment [${tMomentID}]`));
     }
 
     /**
@@ -434,6 +453,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
      */
     private async restoreCodapState(iCodapState: object | null): Promise<any> {
         let out: any = null;
+        console.log(`begin restore state`);
         if (iCodapState) {
             let this_ = this;
             this.restoreInProgress = true;
@@ -441,10 +461,13 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                 action: 'update',
                 resource: 'document',
                 values: iCodapState
-            })
+            }).catch( ()=> {console.log(`•••  caught restoring CODAP state`)})
 
+            console.log('end restore state');
             this_.restoreInProgress = false;
             resetChangeCount();
+        } else {
+            console.log(`no state to restore`);
         }
 
         return out;
@@ -475,12 +498,13 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
     }
 
     /**
-     * Called directly from the DOM
      * User clicks on the trash can
      */
     private handleDeleteCurrentMoment(): void {
+        console.log(`begin deleting current moment`);
         this.editingMomentTitle = false;        //  just in case
         this.timeline.removeCurrentMoment();    //  also sets a new currentMoment
+        console.log(`moment removed from timeline; ready to match to new current moment`);
         this.matchCODAPStateToMoment(this.timeline.currentMoment);
         this.forceUpdate();     //  remove the marker from the bar, point at the current one
         //  StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment);
@@ -568,7 +592,8 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
 
         // console.log(`...displayNarrativeInTextBox() in moment [${momentTitleString}]: ${narrativeString}`);
 
-        const tResult: any = await codapInterface.sendRequest(theMessage);
+        const tResult: any = await codapInterface.sendRequest(theMessage)
+            .catch(()=>{console.log(`••• problem updating the narrative text box`)});
         if (tResult.success) {
             //  console.log(`...successfully updated the text box`);
         }
@@ -770,7 +795,8 @@ class DataStories
      * Calls initializePlugin from codap-helper.
      */
     public async componentWillMount() {
-        await initializePlugin(kPluginName, kVersion, kInitialWideDimensions, this.restorePluginState);
+        await initializePlugin(kPluginName, kVersion, kInitialWideDimensions, this.restorePluginState)
+            .catch(()=>{console.log(`••• problem initializing the plugin`)});
 
         const getComponentListMessage = {
             'action': 'get',
