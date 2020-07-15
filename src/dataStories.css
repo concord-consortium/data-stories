@@ -84,7 +84,6 @@
 .story-child {
     border-radius: 8px;
     height: var(--moment-full-height);
-    /*border: 1px solid #000;*/
     overflow: hidden; /*  was auto    */
     cursor: pointer;
     user-select: none;
@@ -204,12 +203,15 @@ for the current moment
 
 .title-editor {
     font-family: Verdana,sans-serif;
-    /*
-    font-size: 9px;
-    */
-
     width : calc(var(--current-moment-width) - 8px);
     height : calc(var(--moment-full-height) - 8px);
+}
+
+
+.tool-small-icon {
+    font-size: 0.8em;
+    position: relative;
+    top: -2px;
 }
 
 .tool {
@@ -219,25 +221,16 @@ for the current moment
     vertical-align: middle;
 }
 
-.tool-small-icon {
-    font-size: 0.8em;
-    position: relative;
-    top: -2px;
+.shutter-button {
+    height: var(--moment-full-height);
+    border: 1px solid;
+    padding: 1px;
+    transition: left 0.5s;
 }
 
 .icon-button {
     font-size: 20px;
     padding: 4px 6px 0;
-
-    /*
-    padding-left: 6px;
-    padding-right: 6px;
-    padding-top: 4px;
-    padding-bottom: 0;
-    */
-    /*
-    padding: 8px;
-    */
 }
 
 .container-drag {
