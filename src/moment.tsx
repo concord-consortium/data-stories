@@ -77,34 +77,27 @@ export function Moment(props: any) {
                 <DeleteButton onDelete={props.onDelete}/>
                 <RevertButton onRevert={props.onRevert}/>
                 <SaveButton onSaveMoment={props.onSaveMoment}/>
-{/*
-                <NewMomentButton onNewMoment={props.onNewMoment}/>
-*/}
             </div>
         ) :
         "";
 
     const titleZoneGuts = props.editingTitle ?
-        (<textarea
+        (
+            <textarea
                 id={"currentMomentTitleEditBox"}
                 className={"moment-title-zone title-editor"}
                 onBlur={props.onTitleEditBlur}
-                onKeyDown = {props.onKey}
+                onKeyDown={props.onKey}
                 defaultValue={props.theText}>
-{/*
-                onClick={(e:MouseEvent)=>{e.stopPropagation();}}
-*/}
             </textarea>
-        )
-        :
-        (<div
-            className={"moment-title-zone"}
-        >
-            {props.theText}
-        </div>);
+        ) : (
+            <div className={"moment-title-zone"}>
+                {props.theText}
+            </div>
+        );
 
     return (
-        <div id={"DSMarker" + props.id}
+        <div id={"DSMoment" + props.id}
              className={theClasses}
              draggable
              onDragStart={props.onDragStart}

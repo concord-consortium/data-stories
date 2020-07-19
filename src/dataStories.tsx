@@ -24,7 +24,7 @@ const kTrashCan = "🗑";   //    "\uD83D\uddd1";       //  🗑️
 const kSave = "save";
 const kRevert = "rev";
 
-const kVersion = "0.53";
+const kVersion = "0.54";
 const kInitialWideDimensions = {
     width: 800,
     height: 100
@@ -188,6 +188,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
 
     /**
      * Called from the constructor if there is no existing narrative text box
+     * Also called if user makes a new moment and there are none currently.
      */
     async makeInitialMomentAndTextComponent(): Promise<void> {
         const tMoment = this.timeline.makeNewMomentUsingCodapState(null);   //  the unsaved moment has no state yet
@@ -231,7 +232,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         this.timeline.currentMoment = tMoment;
         await StoryArea.displayNarrativeInTextBox(this.timeline.currentMoment)
             .catch(() => {
-                console.log(`••• problem displaying the narrative in the text box`)
+                console.log(`••• problem displaying the initial narrative in the text box`)
             });
 
         this.forceUpdate();     //  make the moment appear on the screen in the bar
@@ -286,7 +287,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                 //  it is not yet the current moment
             }
 
-            //  we are now guaranteed that srcMoemnt and dstMoment are Moments, not null.
+            //  we are now guaranteed that srcMoment and dstMoment are Moments, not null.
 
             const qSaveChanges =
                 `You have made ${gChangeCount === 1 ? "a change" : "some changes"}. ` +
@@ -318,7 +319,8 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
             this.requestDocumentState();
 
         } else {
-            alert("Hmmm. timeline.currentMoment is not set.");
+            //  happens when there is no current moment; so make a new one.
+            this.makeInitialMomentAndTextComponent()
         }
 
     }
@@ -566,6 +568,12 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         }
     }
 
+    /**
+     * The title-editing `<textarea>` has lost focus.
+     * Install its text as the currentMoment's title
+     *
+     * @param iNewTitle
+     */
     private handleTitleEditBlur(iNewTitle: string) {
         this.editingMomentTitle = false;
         if (iNewTitle.length > 0) {
@@ -576,6 +584,12 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         this.forceUpdate();
     }
 
+    /**
+     * We check all keypresses when editing a title;
+     * abort on escape (27) and finish on enter/return (13).
+     *
+     * @param e     the keyboard event
+     */
     private handleTitleEditKeypress(e:any) {
         let handled = true;
         switch(e.keyCode) {
@@ -593,6 +607,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
             e.preventDefault();
             e.stopPropagation();
         }
+        //  if we don't handle it, it does its default: it inserts the charavter in the box!
     }
 
     private handleDrop(e: React.DragEvent) {
@@ -684,7 +699,7 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         it's not part of the list of moments or the editing controls for a particular moment.
         */
 
-        const modelDialog = (
+        const modalDialog = (
             <div className="userChoiceDialog">
                 This is our dialog
             </div>
@@ -745,9 +760,16 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                         <NewMomentButton onClick={(e: MouseEvent) => this_.handleMakeNewMomentButtonPress(e)}/>
                     );
                 }
-
             }
         );
+
+        //  no moments? At least let them make a new one!
+
+        if (theMoments.length === 0) {
+            theMoments.push(
+                <NewMomentButton onClick={(e: MouseEvent) => this_.handleMakeNewMomentButtonPress(e)}/>
+            )
+        }
 
         const momentsArea = (
             <div className="story-area container-drag"
@@ -890,11 +912,11 @@ function DeleteButton(props: any) {
 function NewMomentButton(props: any) {
     return (
         <div id="newMomentButton"
-             className="story-child tool icon-button shutter-button"
+             className="shutter-button"
              onClick={props.onClick}
              title={"press to capture a new moment"}
         >
-            <img width={"28"} src={shutterImage} alt={"snap!"}/>
+            <img className={"shutter-img"} width={"28"} src={shutterImage} alt={"snap!"}/>
         </div>
     )
 }

@@ -127,7 +127,7 @@ export class Timeline {
 
                 while (!done) {
                     //  calculate position of the ixMoment box on the screen
-                    const theElement: any = document.getElementById("DSMarker" + ixMoment.ID);
+                    const theElement: any = document.getElementById("DSMoment" + ixMoment.ID);
                     const momentRect: DOMRect = theElement.getBoundingClientRect();
                     const momentCenter = momentRect.left + momentRect.width / 2;
 
