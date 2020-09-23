@@ -15,6 +15,10 @@
     --story-area-background : #def;
 }
 
+/*
+    This is the entite panel, consisting of the control area on the left
+    and the (main thing) story area to the right
+ */
 .story-panel-wide {
     display: flex;
     height: var(--timeline-height);
@@ -25,7 +29,10 @@
     /* background-color: dodgerblue; */
 }
 
-
+/*
+    Child of the story-panel. Houses any global-ish buttons
+    such as the info icon that brings up help
+ */
 .control-area {
     display: flex;
     height: var(--timeline-height);
@@ -38,6 +45,9 @@
     padding-right: 4px;
 }
 
+/*
+    A parent corral that holds the strip of moments
+ */
 .story-area {
     display: flex;
     height: var(--timeline-height);
@@ -58,6 +68,9 @@
     padding: 4px;
 }
 
+/*
+    Things that live in the story-area such as moments and the shutter icon
+ */
 .story-child {
     border-radius: 8px;
     height: var(--moment-full-height);
@@ -69,6 +82,9 @@
     padding : 0;
 }
 
+/*
+    The main type of story-child.
+ */
 .moment {
     height: var(--moment-full-height);
     width: var(--moment-regular-width);
@@ -87,7 +103,9 @@
 
 
 /**
-for the current moment
+    special properties for the current moment
+    especially: wider
+    also gets a bold border and a slightly darker backgrouund
  */
 .current {
     background-color: #abc;
@@ -99,10 +117,16 @@ for the current moment
     flex : none;    /*  width does not flex when more moments appear    */
 }
 
+/*
+    indicates a moment that has not yet been saved
+ */
 .unsavedMoment {
     background-color: #def;
 }
 
+/*
+    moment titles appear at the top
+ */
 .moment-title-zone {
     text-align: left;
     font-size: 9px;
@@ -110,6 +134,10 @@ for the current moment
     flex : 1;
 }
 
+/*
+    houses moment controls (such as the delete button)
+    this appears and disappears on hover
+ */
 .moment-control-zone {
     height : var(--moment-control-zone-height);
     width : calc(var(--current-moment-width) - 6px);
@@ -125,16 +153,26 @@ for the current moment
     transition: 0.5s;
 }
 
+/*
+    the position of the moment-control-zone is out of the frame by default...
+ */
 .moment .moment-control-zone {
     bottom : calc(-1 * var(--moment-control-zone-height));
     display : flex;     /* was none */
 }
 
+/*
+    ...but flush with the bottom when we hover over the moment
+ */
 .moment:hover .moment-control-zone {
     bottom : 0;
     display : flex;
 }
 
+/*
+    these live in the moment-control-zone.
+    Specific button styles follow
+ */
 .moment-button {
     cursor : pointer;
     height : var(--moment-button-size);
@@ -147,6 +185,9 @@ for the current moment
     margin : 1px;
 }
 
+/*
+    specific moment button for delete
+ */
 .delete-button {
     background-color: red;
 }
@@ -163,6 +204,10 @@ for the current moment
     background-color: darkblue;
 }
 
+/*
+    The moment number appears in the lower right of a moment,
+    and is covered by the moment-control-zone when it appears.
+ */
 .moment-number {
     position : absolute;
 
@@ -202,13 +247,11 @@ for the current moment
     height: var(--shutter-button-size);
     width : var(--shutter-button-size);
     border: 0;
-    padding: 0;
     background: radial-gradient(gold, var(--story-area-background));
     background-color: gold;
     text-align: center;
     margin-top: 8px;
-    padding-top: 6px;
-    padding-left: 0;
+    padding: 6px 0 0;
     border-radius: calc(var(--shutter-button-size) / 2.0);
     cursor: pointer;
 }

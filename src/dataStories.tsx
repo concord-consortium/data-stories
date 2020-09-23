@@ -3,7 +3,9 @@ import codapInterface from "./lib/CodapInterface";
 import {initializePlugin} from './lib/codap-helper';
 import {Timeline} from './timeline';
 import {MomentModel, Moment} from './moment';
+
 //  import Swal from 'sweetalert2';
+
 import './dataStories.css';
 
 import infoImage from "./art/info.png";
@@ -168,16 +170,6 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                         this.forceUpdate();
                     }
 
-                    /*
-                                    const this_ = this;
-                                    setTimeout(function () {
-                                        if (!this_.timeline.startingMoment) {
-                                            this_.makeInitialMomentAndTextComponent();
-                                        } else {
-                                            this_.forceUpdate();
-                                        }
-                                    }, kInitialMomentStartDelay);
-                    */
                 }
             }
         )
@@ -403,6 +395,8 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
         e.stopPropagation();
         console.log(`handleMakeNewMomentButtonPress`);
         this.doBeginChangeToNewMoment(null);
+
+        //  Swal.fire("A new moment!");
     }
 
 
