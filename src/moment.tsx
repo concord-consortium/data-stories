@@ -77,6 +77,7 @@ export function Moment(props: any) {
                 <DeleteButton onDelete={props.onDelete}/>
                 <RevertButton onRevert={props.onRevert}/>
                 <SaveButton onSaveMoment={props.onSaveMoment}/>
+                <NewMomentButton onNewMoment={props.onNewMoment}/>
             </div>
         ) :
         "";
@@ -137,6 +138,7 @@ function SaveButton(props: any) {
         ><i className="fas fa-archive tool-small-icon"> </i></div>
     )
 }
+
 
 function DeleteButton(props: any) {
     return (

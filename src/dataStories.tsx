@@ -26,7 +26,7 @@ const kTrashCan = "🗑";   //    "\uD83D\uddd1";       //  🗑️
 const kSave = "save";
 const kRevert = "rev";
 
-const kVersion = "0.54";
+const kVersion = "0.55";
 const kInitialWideDimensions = {
     width: 800,
     height: 100
@@ -749,11 +749,13 @@ class StoryArea extends Component<{ callbackToAssignRestoreStateFunc: any }, { n
                 )
                 theMoments.push(thisMoment);
 
+/*
                 if (aMoment === this_.timeline.currentMoment) {
                     theMoments.push(
                         <NewMomentButton onClick={(e: MouseEvent) => this_.handleMakeNewMomentButtonPress(e)}/>
                     );
                 }
+*/
             }
         );
 
